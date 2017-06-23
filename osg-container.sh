@@ -18,6 +18,18 @@ dockerimage="docker://rjones30/gluex:latest"
 
 # define the container context for running on osg workers
 
+function usage()
+{
+   echo "Usage: osg-container.sh <your_shell_command> [your_shell_arguments ...]"
+   exit 1
+}
+
+if [[ $# == 0 ]]; then
+    usage
+elif echo $* | grep -q "^-"; then
+    usage
+fi
+
 if [[ -f /environment ]]; then
     echo "Job running on" `hostname`
     uname -a

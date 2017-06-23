@@ -6,4 +6,4 @@ Collection of template scripts useful as a starting point for running GlueX simu
 2. **gridjob-template.py** - python script which contains the commands for executing a Gluex simulation and/or analysis job inside the Gluex singularity container. This template contains a minimal set of python functions to perform all of the steps of a simulation job, from Monte Carlo generation to final analysis and generation of root histograms. The user is expected to rename this script to something specific to the job it is intended to perform, and modify the header to include descriptive text regarding the job.
 
 # Usage
-Descriptive steps
+Usage for each of the above scripts is obtained by running them without any arguments (or with -h or --help or -? as arguments).

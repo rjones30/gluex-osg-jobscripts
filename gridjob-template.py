@@ -632,6 +632,10 @@ def Print(*args):
 
 # check script and arguments for validity
 
+if len(sys.argv) < 2 or re.match(r"^-", sys.argv[1]):
+   usage()
+   sys.exit(1)
+
 if validate_customizations() != 0:
    Print("Error - this job script is a template;",
          "it must be customized before you can run it.")
