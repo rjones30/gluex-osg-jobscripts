@@ -6,4 +6,39 @@ Collection of template scripts useful as a starting point for running GlueX simu
 2. **gridjob-template.py** - python script which contains the commands for executing a Gluex simulation and/or analysis job inside the Gluex singularity container. This template contains a minimal set of python functions to perform all of the steps of a simulation job, from Monte Carlo generation to final analysis and generation of root histograms. The user is expected to rename this script to something specific to the job it is intended to perform, and modify the header to include descriptive text regarding the job.
 
 # Usage
-Usage for each of the above scripts is obtained by running them without any arguments (or with -h or --help or -? as arguments).
+If any of the above scripts is run without any arguments (or with -h or --help or -? as arguments) then the script exits immediately after printing a usage synopsis. The following are some sample command that illustrate how the scripts work when everything is set up correctly in your environment.
+
+```
+$ chmod +x osg-container.sh
+$ ./osg-container.sh ls
+Starting up container on gluex.phys.uconn.edu
+Linux gluex.phys.uconn.edu 2.6.32-696.1.1.el6.x86_64 #1 SMP Tue Apr 11 17:13:24 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+mygridjob.logs  mygridjob.py  osg-container.sh
+Job container exited with code 0
+```
+
+```
+$ ./osg-container.sh which root
+Starting up container on gluex.phys.uconn.edu
+Linux gluex.phys.uconn.edu 2.6.32-696.1.1.el6.x86_64 #1 SMP Tue Apr 11 17:13:24 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+/usr/local/root/6.08.00/bin/root
+Job container exited with code 0
+```
+
+```
+$ ./osg-container.sh bash
+Starting up container on gluex.phys.uconn.edu
+Linux gluex.phys.uconn.edu 2.6.32-696.1.1.el6.x86_64 #1 SMP Tue Apr 11 17:13:24 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+Singularity.gluex:latest> 
+```
+
+The above command start an interactive shell inside the container and waits for the user to type commands.
+
+```
+$ cp gridjob-template.py mygridjob.py
+$ vim mygridjob.py [customize the script header, check that the functions do what you want]
+$ ./mygridjob.py submit
+$ condor_q
+```
+
+The above command creates a new condor submit file in directory <mygridjob>.logs, consisting of the full statistics contained in your <mygridjob>.py sliced into a discrete number of grid-sized processes, and submits them all to the condor batch system for execution on the osg. The "condor_q" command can then be executed from time to time to monitor the progress of the job. As the slices complete, the output files show up in the cwd directory from which the "./mygridjob.py submit" command was issued, while the job logs are sent to subdirectory <mygridjob>.logs, where <mygridjob> is whatever name you used in the "cp" command.
