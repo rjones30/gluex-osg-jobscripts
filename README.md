@@ -40,7 +40,7 @@ $ vim mygridjob.py [customize the script header, check that the functions do wha
 $ ./mygridjob.py submit
 $ condor_q
 
--- Schedd: scosg16.jlab.org : <129.57.xx.yy:9615?...
+-- Schedd: scosg16.jlab.org : &lt;129.57.xx.yy:9615?...
  ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD               
 1156.0   jonesrt         6/23 14:16   0+01:07:33 R  0   976.6 osg-container.sh .
 1156.1   jonesrt         6/23 14:16   0+01:07:33 R  0   976.6 osg-container.sh .
@@ -48,4 +48,4 @@ $ condor_q
 ...
 ```
 
-The above command creates a new condor submit file in directory <mygridjob>.logs, consisting of the full statistics contained in your <mygridjob>.py sliced into a discrete number of grid-sized processes, and submits them all to the condor batch system for execution on the osg. The "condor_q" command can then be executed from time to time to monitor the progress of the job. As the slices complete, the output files show up in the cwd directory from which the "./mygridjob.py submit" command was issued, while the job logs are sent to subdirectory <mygridjob>.logs, where <mygridjob> is whatever name you used in the "cp" command.
+The above command creates a new condor submit file in directory &lt;mygridjob>.logs, consisting of the full statistics contained in your &lt;mygridjob>.py sliced into a discrete number of grid-sized processes, and submits them all to the condor batch system for execution on the osg. The "condor_q" command can then be executed from time to time to monitor the progress of the job. As the slices complete, the output files show up in the cwd directory from which the "./mygridjob.py submit" command was issued, while the job logs are sent to subdirectory &lt;mygridjob>.logs, where &lt;mygridjob> is whatever name you used in the "cp" command.
