@@ -17,6 +17,7 @@
 import sys
 import os
 import re
+import tempfile
 import subprocess
 
 python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site-packages"
@@ -64,7 +65,7 @@ def do_slice(arglist):
 
    # make a copy of ccdb sqlite file in /tmp to be sure file locking works
    global calib_db
-   calib_db_copy = "/tmp/" + os.path.basename(calib_db) + "-" + str(os.getpid())
+   calib_db_copy = tempfile.NamedTemporaryFile().name
    if os.path.exists(calib_db_copy):
       Print("Warning - ccdb sqlite file", calib_db_copy,
             "already exists in tmp directory, assuming it is ok!")
