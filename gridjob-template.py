@@ -84,7 +84,7 @@ def do_slice(arglist):
          return err
 
    # step 2: Physics simulation
-   simoutput = "hdgeant" + suffix + ".hddm"
+   simoutput = "hdgeant4" + suffix + ".hddm"
    if os.path.exists(simoutput) and \
       os.path.getmtime(simoutput) > os.path.getmtime(mcoutput):
       Print("Physics simulation output file", simoutput,
@@ -169,7 +169,7 @@ def do_mcgeneration(output_hddmfile):
          fort15.write(line)
       else:
          fort15.write(line)
-   fort15.close()
+   fort15 = 0
    inputfiles = ("pythia-geant.map", "pythia.dat", "particle.dat")
    for infile in inputfiles:
       err = shellcode("cp " + templates + "/" + infile + " " + infile)
@@ -204,30 +204,32 @@ def do_mcsimulation(input_hddmfile, output_hddmfile):
       if re.match(r"^[Cc]*INFI", line):
          controlin.write("INFILE '" + input_hddmfile + "'\n")
       elif re.match(r"^[Cc]*OUTFI", line):
-         controlin.write("OUTFILE 'hdgeant.hddm'\n")
+         controlin.write("OUTFILE 'hdgeant4.hddm'\n")
       elif re.match(r"^[Cc]*TRIG", line):
          controlin.write("TRIG " + str(number_of_events_per_slice) + "\n")
       elif re.match(r"^[Cc]*SWIT", line):
          controlin.write("SWIT 0 0 0 0 0 0 0 0 0 0\n")
       elif re.match(r"^[Cc]*RUNG", line):
-         controlin.write("cRUNG " + str(run_number) + "\n")
+         controlin.write("RUNG " + str(run_number) + "\n")
       elif re.match(r"^[Cc]*DEBU", line):
          controlin.write("cDEBU 1 10 1000\n")
       else:
          controlin.write(line)
-   controlin.close()
+   controlin = 0
+   runmac = open("run.mac", "w")
+   runmac.write("/run/beamOn " + str(number_of_events_per_slice) + "\n")
+   runmac = 0
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
                        "export JANA_RESOURCE_DIR=" + resources,
-                       "hdgeant4")
+                       "hdgeant4 run.mac")
    if retcode == 0:
-      os.rename("hdgeant.hddm", output_hddmfile)
+      os.rename("hdgeant4.hddm", output_hddmfile)
    else:
-      os.remove("hdgeant.hddm")
-   os.remove("geant.hbook")
-   os.remove("hdgeant.rz")
-   os.remove("control.in")
-   sys.exit(0)
+      os.remove("hdgeant4.hddm")
+   for temp in "control.in", "run.mac", "hdgeant.rz", "geant.hbook":
+      if os.path.exists(temp):
+         os.remove(temp)
    return retcode
 
 def do_mcsmearing(input_hddmfile, output_hddmfile):
@@ -303,4 +305,4 @@ def do_analysis(input_hddmfile, output_rootfile):
 
 ### This is the end of the section that users normally need to customize ###
 
-execute(sys.argv)
+execute(sys.argv, do_slice)
