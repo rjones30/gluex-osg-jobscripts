@@ -36,9 +36,9 @@ try:
    sys.path.append(python_mods)
    from osg_job_helper import *
 except:
-   print "Error - this job script is made to run inside the Gluex singularity container!"
-   print "You may either prefix it with ./osg-container.sh or try it again from a shell",
-   print "running inside the standard container."
+   print "Error - this job script expects to find the cernvm filesystem mounted at /cvmfs"
+   print "with /cvmfs/singularity.opensciencegrid.org and /cvmfs/oasis.opensciencegrid.org"
+   print "reachable by automount."
    sys.exit(1)
 helper_set_slicing(total_events_to_generate, number_of_events_per_slice)
 
