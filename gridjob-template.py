@@ -19,7 +19,7 @@ import os
 import re
 import subprocess
 
-python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site_packages"
+python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site-packages"
 calib_db = "/cvmfs/oasis.opensciencegrid.org/gluex/ccdb/1.06.03/sql/ccdb_2017-06-09.sqlite"
 resources = "/cvmfs/oasis.opensciencegrid.org/gluex/resources"
 templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
