@@ -19,10 +19,9 @@ import os
 import re
 import subprocess
 
-container = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest"
-templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
 calib_db = "/cvmfs/oasis.opensciencegrid.org/gluex/ccdb/1.06.03/sql/ccdb_2017-06-09.sqlite"
 resources = "/cvmfs/oasis.opensciencegrid.org/gluex/resources"
+templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
 jobname = re.sub(r"\.py$", "", os.path.basename(__file__))
 
 # define the run range and event statistics here
@@ -34,9 +33,10 @@ initial_run_number = 31001             # starting value for generated run number
 
 try:
    from osg_job_helper import *
+   helper_set_slicing(total_events_to_generate, number_of_events_per_slice)
 except:
    print "Error - this job script is made to run inside the Gluex singularity container!"
-   print "You may either prefix it with ./osg-container.sh or try it again from a shell"
+   print "You may either prefix it with ./osg-container.sh or try it again from a shell",
    print "running inside the standard container."
    sys.exit(1)
 
