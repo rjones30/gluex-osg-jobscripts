@@ -19,6 +19,7 @@ import os
 import re
 import subprocess
 
+python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site_packages"
 calib_db = "/cvmfs/oasis.opensciencegrid.org/gluex/ccdb/1.06.03/sql/ccdb_2017-06-09.sqlite"
 resources = "/cvmfs/oasis.opensciencegrid.org/gluex/resources"
 templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
@@ -32,13 +33,14 @@ number_of_slices_per_run = 50          # increment run number after this many sl
 initial_run_number = 31001             # starting value for generated run number
 
 try:
+   sys.path.append(python_mods)
    from osg_job_helper import *
-   helper_set_slicing(total_events_to_generate, number_of_events_per_slice)
 except:
    print "Error - this job script is made to run inside the Gluex singularity container!"
    print "You may either prefix it with ./osg-container.sh or try it again from a shell",
    print "running inside the standard container."
    sys.exit(1)
+helper_set_slicing(total_events_to_generate, number_of_events_per_slice)
 
 ### All processing occurs in these functions -- users should customize these as needed ###
 
@@ -243,8 +245,8 @@ def do_mcsmearing(input_hddmfile, output_hddmfile):
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "mcsmear -PJANA:BATCH_MODE=1 " +
-                       "        -PTHREAD_TIMEOUT_FIRST_EVENT=1800 " +
-                       "        -PTHREAD_TIMEOUT=3600 " +
+                       "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
+                       "        -PTHREAD_TIMEOUT=600 " +
                        input_hddmfile)
    ofile = re.sub(r".hddm$", "_smeared.hddm", input_hddmfile)
    if retcode == 0:
@@ -267,8 +269,8 @@ def do_reconstruction(input_hddmfile, output_hddmfile):
                        "export JANA_RESOURCE_DIR=" + resources,
                        "hd_root -PJANA:BATCH_MODE=1 " +
                        "        -PNTHREADS=1 " +
-                       "        -PTHREAD_TIMEOUT_FIRST_EVENT=1800 " +
-                       "        -PTHREAD_TIMEOUT=3600 " +
+                       "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
+                       "        -PTHREAD_TIMEOUT=600 " +
                        "        -PPLUGINS=danarest,monitoring_hists " +
                        input_hddmfile)
    output_root = re.sub(r"\.hddm$", ".root", output_hddmfile)
@@ -293,8 +295,8 @@ def do_analysis(input_hddmfile, output_rootfile):
                        "export JANA_RESOURCE_DIR=" + resources,
                        "hd_root -PJANA:BATCH_MODE=1 " +
                        "        -PNTHREADS=1 " +
-                       "        -PTHREAD_TIMEOUT_FIRST_EVENT=1800 " +
-                       "        -PTHREAD_TIMEOUT=3600 " +
+                       "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
+                       "        -PTHREAD_TIMEOUT=600 " +
                        "        -PPLUGINS=monitoring_hists " +
                        input_hddmfile)
    if retcode == 0:
