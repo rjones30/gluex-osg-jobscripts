@@ -25,7 +25,7 @@ if [[ -f /environment ]]; then
     source /environment
     unset CCDB_CONNECTION
     unset RCDB_CONNECTION
-    $* && retcode=$?
+    $*; retcode=$?
     echo "Job finished with exit code" $retcode
     rm -rf *.sqlite
     exit $retcode
