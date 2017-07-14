@@ -21,7 +21,7 @@ import tempfile
 import subprocess
 
 python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site-packages"
-calib_db = "/cvmfs/oasis.opensciencegrid.org/gluex/ccdb/1.06.03/sql/ccdb_2017-06-09.sqlite"
+calib_db_url = "http://halldweb.jlab.org/dist/ccdb.sqlite"
 resources = "/cvmfs/oasis.opensciencegrid.org/gluex/resources"
 templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
 jobname = re.sub(r"\.py$", "", os.path.basename(__file__))
@@ -60,20 +60,34 @@ def do_slice(arglist):
    global run_number
    global slice_index
    slice_index = int(arglist[0]) + int(arglist[1])
-   run_number = initial_run_number + int(slice_index / number_of_slices_per_run)
+   run_increment = int(slice_index / number_of_slices_per_run)
    suffix = "_" + jobname + "_" + str(slice_index)
+
+   # Look up run number in the runsequence.txt file, if any.
+   # Format of this file is a list of run numbers, one per line.
+   # If the file is missing or improperly formatted, simply advance
+   # the run number by one after every number_of_slices_per_run.
+
+   try:
+      countdown = -1
+      for line in open("runsequence.txt"):
+         run_number = int(line.rstrip().split()[0])
+         if run_number == initial_run_number:
+            countdown = run_increment
+         elif countdown > 0:
+            countdown -= 1
+         if countdown == 0:
+            break
+   except:
+      run_number = initial_run_number + run_increment
 
    # make a copy of ccdb sqlite file in /tmp to be sure file locking works
    global calib_db
-   calib_db_copy = tempfile.NamedTemporaryFile().name
-   if os.path.exists(calib_db_copy):
-      Print("Warning - ccdb sqlite file", calib_db_copy,
-            "already exists in tmp directory, assuming it is ok!")
-   elif shellcode("cp -f " + calib_db + " " + calib_db_copy) != 0:
-      Print("Error - unable to make a local copy of", calib_db_copy,
+   calib_db = tempfile.NamedTemporaryFile().name
+   if shellcode("wget -O " + calib_db + " " + calib_db_url) != 0:
+      Print("Error - unable to fetch a local copy of ccdb.sqlite",
             "so cannot start job in this container!")
       sys.exit(77)
-   calib_db = calib_db_copy
    
    # step 1: MC generation
    mcoutput = "bggen" + suffix + ".hddm"
@@ -84,6 +98,7 @@ def do_slice(arglist):
    else:
       err = do_mcgeneration(mcoutput)
       if err != 0:
+         os.remove(calib_db)
          return err
 
    # step 2: Physics simulation
@@ -96,6 +111,7 @@ def do_slice(arglist):
    else:
       err = do_mcsimulation(mcoutput, simoutput)
       if err != 0:
+         os.remove(calib_db)
          return err
       else:
          os.remove(mcoutput)
@@ -109,6 +125,7 @@ def do_slice(arglist):
    else:
       err = do_mcsmearing(simoutput, smearoutput)
       if err != 0:
+         os.remove(calib_db)
          return err
       else:
          os.remove(simoutput)
@@ -122,6 +139,7 @@ def do_slice(arglist):
    else:
       err = do_reconstruction(smearoutput, restoutput)
       if err != 0:
+         os.remove(calib_db)
          return err
       else:
          os.remove(smearoutput)
@@ -135,10 +153,11 @@ def do_slice(arglist):
    else:
       err = do_analysis(restoutput, rootoutput)
       if err != 0:
+         os.remove(calib_db)
          return err
 
    # return success!
-   os.remove(calib_db_copy)
+   os.remove(calib_db)
    return 0
 
 def do_mcgeneration(output_hddmfile):
