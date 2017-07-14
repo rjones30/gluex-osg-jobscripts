@@ -33,6 +33,11 @@ number_of_events_per_slice = 250       # how many events generated per job
 number_of_slices_per_run = 50          # increment run number after this many slices
 initial_run_number = 31001             # starting value for generated run number
 
+# define the source of random triggers, if you want these
+random_triggers_server = "nod29.phys.uconn.edu"
+random_triggers_folder = "/Gluex/rawdata/random_triggers/RunPeriod-2017-01"
+random_triggers_multiplicity = "1.0"
+
 try:
    sys.path.append(python_mods)
    from osg_job_helper import *
@@ -245,6 +250,11 @@ def do_mcsimulation(input_hddmfile, output_hddmfile):
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "hdgeant4 run.mac")
+
+   # temporary fix to ignore segfault at program exit (to be removed)
+   if retcode == 139:
+      retcode = 0
+
    if retcode == 0:
       os.rename("hdgeant4.hddm", output_hddmfile)
    else:
@@ -261,19 +271,46 @@ def do_mcsmearing(input_hddmfile, output_hddmfile):
    return value should be 0 for success, non-zero if the action could not be
    completed due to errors. If this step is not needed, simply return 0.
    """
+   try:
+      if len(random_triggers_server) > 0:
+         shellcode("uberftp " + random_triggers_server +
+                   " \"ls " + random_triggers_folder + "\"" +
+                   " | awk '{if(NF>8){print $9}}' > randoms_directory")
+         randoms_files = open("randoms_directory").readlines()
+         randoms_file = randoms_files[slice_index % len(randoms_files)].rstrip()
+         shellcode("uberftp " + random_triggers_server +
+                   " \"get " + random_triggers_folder + "/" +
+                   randoms_file + " " + randoms_file + "\"")
+      else:
+         randoms_file = "random_input_events.hddm"
+      if os.path.exists(randoms_file):
+         random_trigger_opts = randoms_file + ":" + random_triggers_multiplicity
+      else:
+         Print("Warning - randoms file not found, no randoms insertion!")
+         raise Exception("randoms file not found!")
+   except:
+      random_trigger_opts = ""
+
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "mcsmear -PJANA:BATCH_MODE=1 " +
                        "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
                        "        -PTHREAD_TIMEOUT=600 " +
-                       input_hddmfile)
+                       input_hddmfile + " " + random_trigger_opts)
+
+   # temporary fix to ignore segfault at program exit (to be removed)
+   if retcode == 139:
+      retcode = 0
+
    ofile = re.sub(r".hddm$", "_smeared.hddm", input_hddmfile)
    if retcode == 0:
       os.rename(ofile, output_hddmfile)
    else:
       os.remove(ofile)
-   os.remove("smear.root")
+   for tempfile in ("smear.root", "randoms_directory", randoms_file):
+      if os.path.exists(tempfile):
+         os.remove(tempfile)
    return retcode
 
 def do_reconstruction(input_hddmfile, output_hddmfile):
@@ -293,6 +330,11 @@ def do_reconstruction(input_hddmfile, output_hddmfile):
                        "        -PTHREAD_TIMEOUT=600 " +
                        "        -PPLUGINS=danarest,monitoring_hists " +
                        input_hddmfile)
+
+   # temporary fix to ignore segfault at program exit (to be removed)
+   if retcode == 139:
+      retcode = 0
+
    output_root = re.sub(r"\.hddm$", ".root", output_hddmfile)
    if retcode == 0:
       os.rename("dana_rest.hddm", output_hddmfile)
@@ -319,6 +361,11 @@ def do_analysis(input_hddmfile, output_rootfile):
                        "        -PTHREAD_TIMEOUT=600 " +
                        "        -PPLUGINS=monitoring_hists " +
                        input_hddmfile)
+
+   # temporary fix to ignore segfault at program exit (to be removed)
+   if retcode == 139:
+      retcode = 0
+
    if retcode == 0:
       os.rename("hd_root.root", output_rootfile)
    else:
