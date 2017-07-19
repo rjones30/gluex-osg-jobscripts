@@ -21,13 +21,13 @@ import tempfile
 import subprocess
 
 python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site-packages"
-calib_db_url = "http://halldweb.jlab.org/dist/ccdb.sqlite"
 resources = "/cvmfs/oasis.opensciencegrid.org/gluex/resources"
 templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
+calib_db = resources + "/sqlite/ccdb.sqlite"
+
 jobname = re.sub(r"\.py$", "", os.path.basename(__file__))
 
 # define the run range and event statistics here
-
 total_events_to_generate = 10000       # aggregate for all slices in this job
 number_of_events_per_slice = 250       # how many events generated per job
 number_of_slices_per_run = 50          # increment run number after this many slices
@@ -86,14 +86,6 @@ def do_slice(arglist):
    except:
       run_number = initial_run_number + run_increment
 
-   # make a copy of ccdb sqlite file in /tmp to be sure file locking works
-   global calib_db
-   calib_db = tempfile.NamedTemporaryFile().name
-   if shellcode("wget -O " + calib_db + " " + calib_db_url) != 0:
-      Print("Error - unable to fetch a local copy of ccdb.sqlite",
-            "so cannot start job in this container!")
-      sys.exit(77)
-   
    # step 1: MC generation
    mcoutput = "bggen" + suffix + ".hddm"
    if os.path.exists(mcoutput):
@@ -103,7 +95,6 @@ def do_slice(arglist):
    else:
       err = do_mcgeneration(mcoutput)
       if err != 0:
-         os.remove(calib_db)
          return err
 
    # step 2: Physics simulation
@@ -116,7 +107,6 @@ def do_slice(arglist):
    else:
       err = do_mcsimulation(mcoutput, simoutput)
       if err != 0:
-         os.remove(calib_db)
          return err
       else:
          os.remove(mcoutput)
@@ -130,7 +120,6 @@ def do_slice(arglist):
    else:
       err = do_mcsmearing(simoutput, smearoutput)
       if err != 0:
-         os.remove(calib_db)
          return err
       else:
          os.remove(simoutput)
@@ -144,7 +133,6 @@ def do_slice(arglist):
    else:
       err = do_reconstruction(smearoutput, restoutput)
       if err != 0:
-         os.remove(calib_db)
          return err
       else:
          os.remove(smearoutput)
@@ -158,11 +146,9 @@ def do_slice(arglist):
    else:
       err = do_analysis(restoutput, rootoutput)
       if err != 0:
-         os.remove(calib_db)
          return err
 
    # return success!
-   os.remove(calib_db)
    return 0
 
 def do_mcgeneration(output_hddmfile):
