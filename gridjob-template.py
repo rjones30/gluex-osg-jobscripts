@@ -23,6 +23,7 @@ import subprocess
 python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site-packages"
 resources = "/cvmfs/oasis.opensciencegrid.org/gluex/resources"
 templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
+conditions_db = resources + "/sqlite/rcdb.sqlite"
 calib_db = resources + "/sqlite/ccdb.sqlite"
 
 jobname = re.sub(r"\.py$", "", os.path.basename(__file__))
@@ -192,6 +193,8 @@ def do_mcgeneration(output_hddmfile):
          sys.exit(1)
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "bggen")
    if retcode == 0:
@@ -234,6 +237,8 @@ def do_mcsimulation(input_hddmfile, output_hddmfile):
    runmac = 0
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "hdgeant4 run.mac")
 
@@ -279,6 +284,8 @@ def do_mcsmearing(input_hddmfile, output_hddmfile):
 
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "mcsmear -PJANA:BATCH_MODE=1 " +
                        "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
@@ -309,6 +316,8 @@ def do_reconstruction(input_hddmfile, output_hddmfile):
    """
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "hd_root -PJANA:BATCH_MODE=1 " +
                        "        -PNTHREADS=1 " +
@@ -340,6 +349,8 @@ def do_analysis(input_hddmfile, output_rootfile):
    """
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
                        "export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
                        "export JANA_RESOURCE_DIR=" + resources,
                        "hd_root -PJANA:BATCH_MODE=1 " +
                        "        -PNTHREADS=1 " +
