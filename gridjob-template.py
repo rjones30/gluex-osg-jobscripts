@@ -227,6 +227,8 @@ def do_mcsimulation(input_hddmfile, output_hddmfile):
          controlin.write("SWIT 0 0 0 0 0 0 0 0 0 0\n")
       elif re.match(r"^[Cc]*RUNG", line):
          controlin.write("RUNG " + str(run_number) + "\n")
+      elif re.match(r"^[Cc]*RNDM", line):
+         controlin.write("RNDM " + str(randomseed) + "\n")
       elif re.match(r"^[Cc]*DEBU", line):
          controlin.write("cDEBU 1 10 1000\n")
       else:
