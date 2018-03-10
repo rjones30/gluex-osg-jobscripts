@@ -11,26 +11,28 @@
 # Author: Richard.T.Jones at uconn.edu
 # Version: June 8, 2017
 
-container="/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest"
-#oasismount="/cvmfs/oasis.opensciencegrid.org"
+container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
 oasismount="/cvmfs"
-dockerimage="docker://rjones30/gluex:latest"
+dockerimage="docker://markito3/gluex_docker_devel:latest"
 userproxy=x509up_u$UID
+
+bs=/group/halld/Software/build_scripts
+dist=/group/halld/www/halldweb/html/dist
+version=2.29_jlab
 
 # define the container context for running on osg workers
 
-if [[ -f /environment ]]; then
+if [[ -L /group ]]; then
     echo "Job running on" `hostname`
     [ -r .$userproxy ] && mv .$userproxy /tmp/$userproxy
-    source /environment
-    unset CCDB_CONNECTION
-    unset RCDB_CONNECTION
-    eval $*; retcode=$?
+    source $bs/gluex_env_jlab.sh $dist/version_$version.xml
+    export JANA_CALIB_URL=sqlite://$dist/ccdb.sqlite
+    export RCDB_CONNECTION=sqlite://$dist/rcdb.sqlite
+    $* && retcode=$?
     echo "Job finished with exit code" $retcode
-    rm -rf *.sqlite
     exit $retcode
 
-elif [[ -f $container/environment ]]; then
+elif [[ -L $container/group ]]; then
     echo "Starting up container on" `hostname`
     [ -r /tmp/$userproxy ] && cp /tmp/$userproxy .$userproxy
     exec singularity exec --containall --bind ${oasismount} --home `pwd`:/srv --pwd /srv --scratch /tmp,/var/tmp ${container} \
