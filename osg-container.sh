@@ -19,6 +19,7 @@ userproxy=x509up_u$UID
 bs=/group/halld/Software/build_scripts
 dist=/group/halld/www/halldweb/html/dist
 version=2.29_jlab
+context=variation:mc
 
 # define the container context for running on osg workers
 
@@ -26,8 +27,9 @@ if [[ -L /group ]]; then
     echo "Job running on" `hostname`
     [ -r .$userproxy ] && mv .$userproxy /tmp/$userproxy
     source $bs/gluex_env_jlab.sh $dist/version_$version.xml
-    export JANA_CALIB_URL=sqlite://$dist/ccdb.sqlite
-    export RCDB_CONNECTION=sqlite://$dist/rcdb.sqlite
+    export RCDB_CONNECTION=sqlite:///$dist/rcdb.sqlite
+    export JANA_CALIB_URL=sqlite:///$dist/ccdb.sqlite
+    export JANA_CALIB_CONTEXT=$context
     $* && retcode=$?
     echo "Job finished with exit code" $retcode
     exit $retcode
