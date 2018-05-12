@@ -37,7 +37,7 @@ if [[ -L /group ]]; then
 elif [[ -L $container/group ]]; then
     echo "Starting up container on" `hostname`
     [ -r /tmp/$userproxy ] && cp /tmp/$userproxy .$userproxy
-    exec singularity exec --containall --bind ${oasismount} --home `pwd`:/srv --pwd /srv --scratch /tmp,/var/tmp ${container} \
+    exec singularity exec --containall --bind ${oasismount} --home `pwd`:/srv --pwd /srv ${container} \
     bash $0 $*
 
 else
