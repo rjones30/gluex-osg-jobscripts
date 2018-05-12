@@ -18,7 +18,7 @@ userproxy=x509up_u$UID
 
 bs=/group/halld/Software/build_scripts
 dist=/group/halld/www/halldweb/html/dist
-version=2.29_jlab
+version=2.34_jlab
 context=variation:mc
 
 # define the container context for running on osg workers
