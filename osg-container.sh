@@ -25,11 +25,25 @@ context=variation:mc
 
 if [[ -L /group ]]; then
     echo "Job running on" `hostname`
+    if [[ $1 = "make.env" ]]; then
+        echo "#!/usr/bin/env -i" > make.env
+        echo "source $bs/gluex_env_jlab.sh $dist/version_$version.xml" >> make.env
+        echo "env > this.env" >> make.env
+        bash make.env
+        sort this.env \
+        | awk '/^SHLVL/{next}/^_=/{next}/^PWD=/{next}/^OLDPWD/{next}/^PATH/{print $1":/bin";next}{print}'\
+        > osg-nocontainer_$version.env \
+        && echo "new container environment script osg-nocontainer_$version.env created."
+        retcode=$?
+        rm -rf make.env this.env
+        exit $retcode
+    fi
     [ -r .$userproxy ] && mv .$userproxy /tmp/$userproxy
     source $bs/gluex_env_jlab.sh $dist/version_$version.xml
     export RCDB_CONNECTION=sqlite:///$dist/rcdb.sqlite
     export JANA_CALIB_URL=sqlite:///$dist/ccdb.sqlite
     export JANA_CALIB_CONTEXT=$context
+    export OSG_CONTAINER_HELPER=""
     $* && retcode=$?
     echo "Job finished with exit code" $retcode
     exit $retcode
