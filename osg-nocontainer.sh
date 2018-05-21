@@ -24,16 +24,21 @@ userproxy=x509up_u$UID
 
 bs=/group/halld/Software/build_scripts
 dist=/group/halld/www/halldweb/html/dist
-version=2.34_jlab
-context=variation:mc
+version=2.29_jlab
+context="variation=mc calibtime=2018-05-21"
 
 # define the container context for running on osg workers
 
 if [[ -L $container/group ]]; then
     echo "Job running on" `hostname`
+    echo "=== Contents of /cvmfs/oasis.opensciencegrid.org/gluex/update.details: ==="
+    cat /cvmfs/oasis.opensciencegrid.org/gluex/update.details
+    echo "=========================================================================="
     if [[ -f osg-nocontainer_$version.env ]]; then
         tmpenv=/tmp/env$$
-        sed "s|/group/halld|$oasisroot/group/halld|g" osg-nocontainer_$version.env > $tmpenv
+        cat osg-nocontainer_$version.env \
+        | sed "s|/group/halld|$oasisroot/group/halld|g" \
+        | awk '{print "export",$0}' > $tmpenv
         source $tmpenv
         rm -f $tmpenv
     else
@@ -42,15 +47,18 @@ if [[ -L $container/group ]]; then
         echo "  You must build this script before using osg-nocontainer.sh with this version."
         exit 3
     fi
-    export RCDB_CONNECTION=sqlite:///$container/$dist/rcdb.sqlite
-    export JANA_CALIB_URL=sqlite:///$container/$dist/ccdb.sqlite
+    export RCDB_CONNECTION=sqlite:///$oasisroot/$dist/rcdb.sqlite
+    export CCDB_CONNECTION=sqlite:///$oasisroot/$dist/ccdb.sqlite
+    export JANA_GEOMETRY_URL=ccdb://GEOMETRY/main_HDDS.xml
+    export JANA_CALIB_URL=sqlite:///$oasisroot/$dist/ccdb.sqlite
     export JANA_CALIB_CONTEXT=$context
     export OSG_CONTAINER_HELPER=`pwd`/osg-container-helper.sh
-    $* && retcode=$?
+    $*
+    retcode=$?
     echo "Job finished with exit code" $retcode
     exit $retcode
 
 else
     echo "Job container not found on" `hostname`
+    exit 9
 fi
-
