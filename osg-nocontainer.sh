@@ -17,11 +17,21 @@
 # Author: Richard.T.Jones at uconn.edu
 # Version: June 8, 2017
 
-container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
-oasisroot="/cvmfs/oasis.opensciencegrid.org/gluex"
 dockerimage="docker://markito3/gluex_docker_devel:latest"
-userproxy=x509up_u$UID
+container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+oasismount="/cvmfs"
 
+if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
+    container=$OSG_GLUEX_CONTAINER
+fi
+if [[ -n "$OSG_GLUEX_SOFTWARE" ]]; then
+    oasismount=$OSG_GLUEX_SOFTWARE
+fi
+     
+oasisprefix="oasis.opensciencegrid.org/gluex"
+oasisroot="$oasismount/$oasisprefix"
+userproxy=x509up_u$UID
+     
 bs=/group/halld/Software/build_scripts
 dist=/group/halld/www/halldweb/html/dist
 version=2.29_jlab
@@ -29,10 +39,10 @@ context="variation=mc calibtime=2018-05-21"
 
 # define the container context for running on osg workers
 
-if [[ -L $container/group ]]; then
+if [[ -d $container/group ]]; then
     echo "Job running on" `hostname`
-    echo "=== Contents of /cvmfs/oasis.opensciencegrid.org/gluex/update.details: ==="
-    cat /cvmfs/oasis.opensciencegrid.org/gluex/update.details
+    echo "=== Contents of $oasisroot/gluex/update.details: ==="
+    cat $oasisroot/update.details
     echo "=========================================================================="
     if [[ -f osg-nocontainer_$version.env ]]; then
         tmpenv=/tmp/env$$

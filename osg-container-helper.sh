@@ -9,9 +9,19 @@
 # Author: Richard.T.Jones at uconn.edu
 # Version: May 15, 2018
 
-container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
-oasisroot="/cvmfs/oasis.opensciencegrid.org/gluex"
 dockerimage="docker://markito3/gluex_docker_devel:latest"
+container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+oasismount="/cvmfs"
+
+if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
+    container=$OSG_GLUEX_CONTAINER
+fi
+if [[ -n "$OSG_GLUEX_SOFTWARE" ]]; then
+    oasismount=$OSG_GLUEX_SOFTWARE
+fi
+     
+oasisprefix="oasis.opensciencegrid.org/gluex"
+oasisroot="$oasismount/$oasisprefix"
 
 if [[ -h /tmp/sing ]]; then
     true
