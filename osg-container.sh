@@ -18,8 +18,8 @@ oasismount="/cvmfs"
 if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
     container=$OSG_GLUEX_CONTAINER
 fi
-if [[ -n "$OSG_GLUEX_OASIS" ]]; then
-    oasismount=$OSG_GLUEX_OASIS
+if [[ -n "$OSG_GLUEX_SOFTWARE" ]]; then
+    oasismount=$OSG_GLUEX_SOFTWARE
 fi
      
 oasisprefix="oasis.opensciencegrid.org/gluex"
@@ -33,7 +33,7 @@ context="variation=mc calibtime=2018-05-21"
 
 # define the container context for running on osg workers
 
-if [[ -L /group ]]; then
+if [[ -L /group  || -d /group ]]; then
     echo "Job running on" `hostname`
     echo "=== Contents of $oasisroot/update.details: ==="
     cat $oasisroot/update.details
@@ -71,8 +71,7 @@ if [[ -L /group ]]; then
         # Here is where we populate the stripped-down container tarball,
         # so add to this list any directories that need to be included.
         echo "$oasisprefix/update.details" > make.tgz
-        echo "$oasisprefix$dist/ccdb.sqlite" >> make.tgz
-        echo "$oasisprefix$dist/rcdb.sqlite" >> make.tgz
+        echo "$oasisprefix$dist" >> make.tgz
         echo "$oasisprefix/Diracxx" >> make.tgz
         echo "$oasisprefix/HDGeant4/g4py" >> make.tgz
         echo "$oasisprefix/HDGeant4/bin/Linux-g++" >> make.tgz
@@ -108,13 +107,14 @@ if [[ -L /group ]]; then
     echo "Job finished with exit code" $retcode
     exit $retcode
 
-elif [[ -L $container/group ]]; then
+elif [[ -L $container/group || -d $container/group ]]; then
     echo "Starting up container on" `hostname`
     [ -r /tmp/$userproxy ] && cp /tmp/$userproxy .$userproxy
-    exec singularity exec --containall --bind ${oasismount} --home `pwd`:/srv --pwd /srv ${container} \
+    exec singularity exec --containall --bind ${oasismount}:/cvmfs --home `pwd`:/srv --pwd /srv ${container} \
     bash $0 $*
 
 else
     echo "Job container not found on" `hostname`
+    echo "Hint: Look at http://zeus.phys.uconn.edu/halld/containers"
     exit 9
 fi
