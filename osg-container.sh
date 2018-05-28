@@ -33,7 +33,8 @@ context="variation=mc calibtime=2018-05-21"
 
 # define the container context for running on osg workers
 
-if [[ -L /group  || -d /group ]]; then
+# check if we are already inside the container -- no foolproof way to do this!!
+if [[ ! -d /boot ]]; then
     echo "Job running on" `hostname`
     echo "=== Contents of $oasisroot/update.details: ==="
     cat $oasisroot/update.details
@@ -105,6 +106,13 @@ if [[ -L /group  || -d /group ]]; then
     export JANA_CALIB_URL=sqlite:///$dist/ccdb.sqlite
     export JANA_CALIB_CONTEXT=$context
     export OSG_CONTAINER_HELPER=""
+    if [[ -d $oasisroot/xrootd ]]; then
+        export XROOTD_HOME=$oasisroot/xrootd
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XROOTD_HOME/lib64
+        export LD_PRELOAD=$XROOTD_HOME/lib64/libXrdPosixPreload.so
+    else
+        unset LD_PRELOAD
+    fi
     $* ; retcode=$?
     echo "Job finished with exit code" $retcode
     exit $retcode

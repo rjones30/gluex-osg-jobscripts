@@ -50,7 +50,7 @@ if [[ -d $container/group || -h $container/group ]]; then
         | sed "s|/group/halld|$oasisroot/group/halld|g" \
         | awk '{print "export",$0}' > $tmpenv
         source $tmpenv
-        rm -f $tmpenv
+        #rm -f $tmpenv
     else
         echo "Error in osg-nocontainer.sh - "
         echo "  prebuilt container environment script osg-nocontainer_$version.env not found"
@@ -63,6 +63,13 @@ if [[ -d $container/group || -h $container/group ]]; then
     export JANA_CALIB_URL=sqlite:///$oasisroot/$dist/ccdb.sqlite
     export JANA_CALIB_CONTEXT=$context
     export OSG_CONTAINER_HELPER=`pwd`/osg-container-helper.sh
+    if [[ -d $oasisroot/xrootd ]]; then
+        export XROOTD_HOME=$oasisroot/xrootd
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XROOTD_HOME/lib64
+        export LD_PRELOAD=$XROOTD_HOME/lib64/libXrdPosixPreload.so
+    else
+        unset LD_PRELOAD
+    fi
     $*
     retcode=$?
     echo "Job finished with exit code" $retcode
