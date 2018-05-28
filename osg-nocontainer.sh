@@ -70,5 +70,6 @@ if [[ -d $container/group ]]; then
 
 else
     echo "Job container not found on" `hostname`
+    echo "Hint: Look at http://zeus.phys.uconn.edu/halld/containers"
     exit 9
 fi
