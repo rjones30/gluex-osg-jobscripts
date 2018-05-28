@@ -39,7 +39,9 @@ if [[ -L /group  || -d /group ]]; then
     cat $oasisroot/update.details
     echo "=========================================================================="
     if [[ $1 = "make.env" ]]; then
-        echo "#!/usr/bin/env -i" > make.env
+        echo "#!/bin/bash" > make.env
+        echo '[ -z "$CLEANENV" ] && exec /bin/env -i CLEANENV=1 /bin/sh "$0" "$@"' >> make.env
+        echo "unset CLEANENV" >> make.env
         echo "source $bs/gluex_env_jlab.sh $dist/version_$version.xml" >> make.env
         echo "env > this.env" >> make.env
         bash make.env
