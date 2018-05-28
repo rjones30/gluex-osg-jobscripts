@@ -39,7 +39,7 @@ context="variation=mc calibtime=2018-05-21"
 
 # define the container context for running on osg workers
 
-if [[ -d $container/group ]]; then
+if [[ -d $container/group || -h $container/group ]]; then
     echo "Job running on" `hostname`
     echo "=== Contents of $oasisroot/gluex/update.details: ==="
     cat $oasisroot/update.details
