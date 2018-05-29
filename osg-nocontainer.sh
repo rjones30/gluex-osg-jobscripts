@@ -50,7 +50,7 @@ if [[ -d $container/group || -h $container/group ]]; then
         | sed "s|/group/halld|$oasisroot/group/halld|g" \
         | awk '{print "export",$0}' > $tmpenv
         source $tmpenv
-        #rm -f $tmpenv
+        rm -f $tmpenv
     else
         echo "Error in osg-nocontainer.sh - "
         echo "  prebuilt container environment script osg-nocontainer_$version.env not found"
