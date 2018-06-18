@@ -53,7 +53,7 @@ else
     elif [[ ! -x $app_binary ]]; then 
         echo "$1 is not executable"
         exit 1
-    elif file -L $app_binary | grep -qi elf; then
+    elif head $app_binary | grep -q ^.ELF; then
          true
     else
         echo "$1 is not a binary executable"
