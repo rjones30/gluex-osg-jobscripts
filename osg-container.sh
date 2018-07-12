@@ -75,6 +75,7 @@ if [[ ! -d /boot ]]; then
         # so add to this list any directories that need to be included.
         echo "$oasisprefix/update.details" > make.tgz
         echo "$oasisprefix$dist" >> make.tgz
+        echo "$oasisprefix/xrootd" >> make.tgz
         echo "$oasisprefix/Diracxx" >> make.tgz
         echo "$oasisprefix/HDGeant4/g4py" >> make.tgz
         echo "$oasisprefix/HDGeant4/bin/Linux-g++" >> make.tgz
