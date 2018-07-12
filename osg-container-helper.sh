@@ -23,10 +23,11 @@ fi
 oasisprefix="oasis.opensciencegrid.org/gluex"
 oasisroot="$oasismount/$oasisprefix"
 
-if [[ -h /tmp/sing ]]; then
+tmpsing=`pwd`/.sing
+if [[ -h $tmpsing ]]; then
     true
 else
-    ln -s $container /tmp/sing
+    ln -s $container $tmpsing
 fi
 
 if echo $1 | grep -q ^/; then
@@ -35,9 +36,9 @@ elif [[ -z "$1" ]]; then
     echo "no executable specified"
     exit 1
 else
-    for path in /tmp/sing/bin /tmp/sing/sbin \
-                /tmp/sing/usr/bin /tmp/sing/usr/sbin \
-                /tmp/sing/usr/local/bin /tmp/sing/usr/local/sbin
+    for path in $tmpsing/bin $tmpsing/sbin \
+                $tmpsing/usr/bin $tmpsing/usr/sbin \
+                $tmpsing/usr/local/bin $tmpsing/usr/local/sbin
      do
         if [[ -x $path/$1 ]]; then
             app_binary=$path/$1
@@ -62,4 +63,4 @@ else
 fi
 shift
 
-/tmp/sing/lib64/ld-linux-x86-64.so.2 --library-path /tmp/sing/lib64:/tmp/sing/usr/lib64:/tmp/sing/usr/lib64/mysql:$LD_LIBRARY_PATH $app_binary $*
+$tmpsing/lib64/ld-linux-x86-64.so.2 --library-path $tmpsing/lib64:$tmpsing/usr/lib64:$tmpsing/usr/lib64/mysql:$LD_LIBRARY_PATH $app_binary $*
