@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # osg-container-helper.sh - helper script to allow users to run binary
 #                           applications outside the Gluex container 

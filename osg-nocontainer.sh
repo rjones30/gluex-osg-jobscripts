@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # osg-nocontainer.sh - gluex job wrapper script for osg jobs
 #
@@ -45,12 +45,9 @@ if [[ -d $container/group || -h $container/group ]]; then
     cat $oasisroot/update.details
     echo "=========================================================================="
     if [[ -f osg-nocontainer_$version.env ]]; then
-        tmpenv=/tmp/env$$
-        cat osg-nocontainer_$version.env \
+        source <(cat osg-nocontainer_$version.env \
         | sed "s|/group/halld|$oasisroot/group/halld|g" \
-        | awk '{print "export",$0}' > $tmpenv
-        source $tmpenv
-        rm -f $tmpenv
+        | awk '{print "export",$0}')
     else
         echo "Error in osg-nocontainer.sh - "
         echo "  prebuilt container environment script osg-nocontainer_$version.env not found"
