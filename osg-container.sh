@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # osg-container.sh - gluex job wrapper script for osg jobs
 #
