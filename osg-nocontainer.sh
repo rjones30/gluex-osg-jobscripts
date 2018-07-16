@@ -45,7 +45,7 @@ if [[ -d $container/group || -h $container/group ]]; then
     cat $oasisroot/update.details
     echo "=========================================================================="
     if [[ -f osg-nocontainer_$version.env ]]; then
-        source <(cat osg-nocontainer_$version.env \
+        source /dev/stdin <<<$(cat osg-nocontainer_$version.env \
         | sed "s|/group/halld|$oasisroot/group/halld|g" \
         | awk '{print "export",$0}')
     else
