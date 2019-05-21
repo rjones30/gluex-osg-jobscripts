@@ -12,7 +12,8 @@
 # Version: June 8, 2017
 
 dockerimage="docker://markito3/gluex_docker_devel:latest"
-container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+#container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+container="/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest"
 oasismount="/cvmfs"
 
 if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
@@ -28,8 +29,8 @@ userproxy=x509up_u$UID
 
 bs=/group/halld/Software/build_scripts
 dist=/group/halld/www/halldweb/html/dist
-version=2.29_jlab
-context="variation=mc calibtime=2018-05-21"
+version=4.4.0
+context="variation=mc"
 
 # define the container context for running on osg workers
 

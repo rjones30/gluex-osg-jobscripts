@@ -10,7 +10,8 @@
 # Version: May 15, 2018
 
 dockerimage="docker://markito3/gluex_docker_devel:latest"
-container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+#container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+container="/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest"
 oasismount="/cvmfs"
 
 if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then

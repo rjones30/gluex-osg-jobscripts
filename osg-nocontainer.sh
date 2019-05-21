@@ -18,7 +18,8 @@
 # Version: June 8, 2017
 
 dockerimage="docker://markito3/gluex_docker_devel:latest"
-container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+#container="/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"
+container="/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest"
 oasismount="/cvmfs"
 
 if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
@@ -34,8 +35,8 @@ userproxy=x509up_u$UID
      
 bs=/group/halld/Software/build_scripts
 dist=/group/halld/www/halldweb/html/dist
-version=2.29_jlab
-context="variation=mc calibtime=2018-05-21"
+version=4.4.0
+context="variation=mc"
 
 # define the container context for running on osg workers
 
@@ -64,6 +65,7 @@ if [[ -d $container/group || -h $container/group ]]; then
         export XROOTD_HOME=$oasisroot/xrootd/3.3.2
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XROOTD_HOME/lib64
         export LD_PRELOAD=$XROOTD_HOME/lib64/libXrdPosixPreload.so
+        export PATH=$PATH:$XROOTD_HOME/bin
     else
         unset LD_PRELOAD
     fi
