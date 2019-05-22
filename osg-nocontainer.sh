@@ -62,10 +62,10 @@ if [[ -d $container/group || -h $container/group ]]; then
     export JANA_CALIB_CONTEXT=$context
     export OSG_CONTAINER_HELPER=`pwd`/osg-container-helper.sh
     if [[ -d $oasisroot/xrootd ]]; then
-        export XROOTD_HOME=$oasisroot/xrootd/3.3.2
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XROOTD_HOME/lib64
+        export XROOTD_HOME=$oasisroot/xrootd/4.9.1/x86_64
+        export PATH=$XROOTD_HOME/bin:$PATH
+        export LD_LIBRARY_PATH=$XROOTD_HOME/lib64:$LD_LIBRARY_PATH
         export LD_PRELOAD=$XROOTD_HOME/lib64/libXrdPosixPreload.so
-        export PATH=$PATH:$XROOTD_HOME/bin
     else
         unset LD_PRELOAD
     fi
