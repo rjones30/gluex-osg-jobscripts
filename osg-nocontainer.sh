@@ -24,6 +24,7 @@ oasismount="/cvmfs"
 
 if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
     container=$OSG_GLUEX_CONTAINER/singularity.opensciencegrid.org/rjones30/gluex:latest
+    #container=$OSG_GLUEX_CONTAINER/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest
 fi
 if [[ -n "$OSG_GLUEX_SOFTWARE" ]]; then
     oasismount=$OSG_GLUEX_SOFTWARE
