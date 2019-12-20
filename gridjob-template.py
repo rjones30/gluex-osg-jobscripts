@@ -283,6 +283,7 @@ def do_mcsmearing(input_hddmfile, output_hddmfile):
          Print("Warning - randoms file not found, no randoms insertion!")
          raise Exception("randoms file not found!")
    except:
+      randoms_file = "randoms_not_available"
       random_trigger_opts = ""
 
    retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
