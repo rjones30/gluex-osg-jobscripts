@@ -35,7 +35,7 @@ userproxy=x509up_u$UID
      
 bs=/group/halld/Software/build_scripts
 dist=/group/halld/www/halldweb/html/dist
-version=4.4.0
+version=4.9.0
 context="variation=mc"
 
 # define the container context for running on osg workers
