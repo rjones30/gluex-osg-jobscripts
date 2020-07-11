@@ -23,7 +23,8 @@ container="/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest"
 oasismount="/cvmfs"
 
 if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
-    container=$OSG_GLUEX_CONTAINER
+    container=$OSG_GLUEX_CONTAINER/singularity.opensciencegrid.org/rjones30/gluex:latest
+    #container=$OSG_GLUEX_CONTAINER/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest
 fi
 if [[ -n "$OSG_GLUEX_SOFTWARE" ]]; then
     oasismount=$OSG_GLUEX_SOFTWARE
@@ -34,8 +35,8 @@ oasisroot="$oasismount/$oasisprefix"
 userproxy=x509up_u$UID
      
 bs=/group/halld/Software/build_scripts
-dist=/group/halld/www/halldweb/html/dist
-version=4.4.0
+dist=/group/halld/www/halldweb/html/halld_versions
+version=4.21.0
 context="variation=mc"
 
 # define the container context for running on osg workers

@@ -1,16 +1,11 @@
 #!/usr/bin/env python2.7
 #
-# jobname: gridjob-template
-# author: gluex.experimenter@jlab.org
-# created: jan 1, 1969
+# jobname: example1
+# author: richard.t.jones at uconn.edu
+# created: dec 20, 2019
 #
 #======================================================================
-# TEMPLATE JOB SCRIPT FOR GLUEX OSG PRODUCTION
-#
-# YOU MUST REPLACE "gridjob-template" ABOVE WITH A UNIQUE NAME FOR THIS 
-# JOB, CUSTOMIZE THE SCRIPT SO THE JOB DOES WHAT YOU WANT, REPLACE THESE
-# HEADER LINES (THE ONES BETWEEN THE ===) WITH A BRIEF DESCRIPTION OF
-# WHAT IT DOES, AND SAVE IT UNDER THE NEW NAME.
+# example job script for comparison of Intel vs AMD/EPYCS processors
 #======================================================================
 
 
@@ -20,6 +15,7 @@ import re
 import tempfile
 import subprocess
 
+nthreads = 1
 python_mods = "/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest/usr/lib/python2.7/site-packages"
 resources = "/cvmfs/oasis.opensciencegrid.org/gluex/resources"
 templates = "/cvmfs/oasis.opensciencegrid.org/gluex/templates"
@@ -30,9 +26,9 @@ jobname = re.sub(r"\.py$", "", os.path.basename(__file__))
 
 # define the run range and event statistics here
 total_events_to_generate = 10000       # aggregate for all slices in this job
-number_of_events_per_slice = 250       # how many events generated per job
+number_of_events_per_slice = 10000     # how many events generated per job
 number_of_slices_per_run = 50          # increment run number after this many slices
-initial_run_number = 31001             # starting value for generated run number
+initial_run_number = 71000             # starting value for generated run number
 
 # define the source of random triggers, if you want these
 random_triggers_server = "nod29.phys.uconn.edu"
@@ -191,12 +187,12 @@ def do_mcgeneration(output_hddmfile):
          Print("Error - cannot copy bggen templates from cvmfs store,",
                "quitting!")
          sys.exit(1)
-   retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
-                       "export JANA_CALIB_URL=sqlite:///" + calib_db,
-                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
-                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
-                       "export JANA_RESOURCE_DIR=" + resources,
-                       "bggen")
+   retcode = shellcode(#"export JANA_CALIB_CONTEXT=variation=mc",
+                       #"export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       #"export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       #"export RCDB_CONNECTION=sqlite:///" + conditions_db,
+                       #"export JANA_RESOURCE_DIR=" + resources,
+                       "time bggen")
    if retcode == 0:
       os.rename("bggen.hddm", output_hddmfile)
    else:
@@ -238,12 +234,12 @@ def do_mcsimulation(input_hddmfile, output_hddmfile):
    runmac = open("run.mac", "w")
    runmac.write("/run/beamOn " + str(number_of_events_per_slice) + "\n")
    runmac = 0
-   retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
-                       "export JANA_CALIB_URL=sqlite:///" + calib_db,
-                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
-                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
-                       "export JANA_RESOURCE_DIR=" + resources,
-                       "hdgeant4 run.mac")
+   retcode = shellcode(#"export JANA_CALIB_CONTEXT=variation=mc",
+                       #"export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       #"export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       #"export RCDB_CONNECTION=sqlite:///" + conditions_db,
+                       #"export JANA_RESOURCE_DIR=" + resources,
+                       "time hdgeant4 -t {0} run.mac".format(nthreads))
 
    # temporary fix to ignore segfault at program exit (to be removed)
    if retcode == 139:
@@ -286,12 +282,13 @@ def do_mcsmearing(input_hddmfile, output_hddmfile):
       randoms_file = "randoms_not_available"
       random_trigger_opts = ""
 
-   retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
-                       "export JANA_CALIB_URL=sqlite:///" + calib_db,
-                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
-                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
-                       "export JANA_RESOURCE_DIR=" + resources,
-                       "mcsmear -PJANA:BATCH_MODE=1 " +
+   retcode = shellcode(#"export JANA_CALIB_CONTEXT=variation=mc",
+                       #"export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       #"export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       #"export RCDB_CONNECTION=sqlite:///" + conditions_db,
+                       #"export JANA_RESOURCE_DIR=" + resources,
+                       "time mcsmear -PJANA:BATCH_MODE=1 " +
+                       "        -PNTHREADS={0}".format(nthreads) +
                        "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
                        "        -PTHREAD_TIMEOUT=600 " +
                        input_hddmfile + " " + random_trigger_opts)
@@ -318,13 +315,13 @@ def do_reconstruction(input_hddmfile, output_hddmfile):
    could not be completed due to errors. If this step is not needed,
    simply return 0.
    """
-   retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
-                       "export JANA_CALIB_URL=sqlite:///" + calib_db,
-                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
-                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
-                       "export JANA_RESOURCE_DIR=" + resources,
-                       "hd_root -PJANA:BATCH_MODE=1 " +
-                       "        -PNTHREADS=1 " +
+   retcode = shellcode(#"export JANA_CALIB_CONTEXT=variation=mc",
+                       #"export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       #"export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       #"export RCDB_CONNECTION=sqlite:///" + conditions_db,
+                       #"export JANA_RESOURCE_DIR=" + resources,
+                       "time hd_root -PJANA:BATCH_MODE=1 " +
+                       "        -PNTHREADS={0}".format(nthreads) +
                        "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
                        "        -PTHREAD_TIMEOUT=600 " +
                        "        -PPLUGINS=danarest,monitoring_hists " +
@@ -351,13 +348,13 @@ def do_analysis(input_hddmfile, output_rootfile):
    could not be completed due to errors. If this step is not needed,
    simply return 0.
    """
-   retcode = shellcode("export JANA_CALIB_CONTEXT=variation=mc",
-                       "export JANA_CALIB_URL=sqlite:///" + calib_db,
-                       "export CCDB_CONNECTION=sqlite:///" + calib_db,
-                       "export RCDB_CONNECTION=sqlite:///" + conditions_db,
-                       "export JANA_RESOURCE_DIR=" + resources,
-                       "hd_root -PJANA:BATCH_MODE=1 " +
-                       "        -PNTHREADS=1 " +
+   retcode = shellcode(#"export JANA_CALIB_CONTEXT=variation=mc",
+                       #"export JANA_CALIB_URL=sqlite:///" + calib_db,
+                       #"export CCDB_CONNECTION=sqlite:///" + calib_db,
+                       #"export RCDB_CONNECTION=sqlite:///" + conditions_db,
+                       #"export JANA_RESOURCE_DIR=" + resources,
+                       "time hd_root -PJANA:BATCH_MODE=1 " +
+                       "        -PNTHREADS={0}".format(nthreads) +
                        "        -PTHREAD_TIMEOUT_FIRST_EVENT=600 " +
                        "        -PTHREAD_TIMEOUT=600 " +
                        "        -PPLUGINS=monitoring_hists " +
