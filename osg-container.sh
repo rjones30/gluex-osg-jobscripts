@@ -17,7 +17,7 @@ container="/cvmfs/singularity.opensciencegrid.org/rjones30/gluex:latest"
 oasismount="/cvmfs"
 
 if [[ -n "$OSG_GLUEX_CONTAINER" ]]; then
-    container=$OSG_GLUEX_CONTAINER
+    container=$OSG_GLUEX_CONTAINER/singularity.opensciencegrid.org/rjones30/gluex:latest
 fi
 if [[ -n "$OSG_GLUEX_SOFTWARE" ]]; then
     oasismount=$OSG_GLUEX_SOFTWARE
@@ -123,11 +123,21 @@ if [[ ! -d /boot ]]; then
 elif [[ -L $container/group || -d $container/group ]]; then
     echo "Starting up container on" `hostname`
     [ -r /tmp/$userproxy ] && cp /tmp/$userproxy .$userproxy
-    exec singularity exec --containall --bind ${oasismount}:/cvmfs --home `pwd`:/srv --pwd /srv ${container} \
-    bash $0 $*
+    if [[ -L $oasismount/oasis.opensciencegrid.org || -d $oasismount/oasis.opensciencegrid.org ]]; then
+        echo "found oasis at $oasismount"
+        exec singularity exec --containall --bind ${oasismount}:/cvmfs \
+             --home `pwd`:/srv --pwd /srv ${container} bash $0 $*
+    elif command -v singcvmfs > /dev/null; then
+        exec singcvmfs exec --containall \
+             --home `pwd`:/srv --pwd /srv ${container} bash $0 $*
+    else
+        echo "Cannot find or mount oasis filesystem!"
+        echo "cvmfsexec not installed or not in path."
+        exit 9
+    fi
 
 else
-    echo "Job container not found on" `hostname`
+    echo "Job container $container not found on" `hostname`
     echo "Hint: Look at http://zeus.phys.uconn.edu/halld/containers"
     exit 9
 fi
