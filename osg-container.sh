@@ -112,7 +112,7 @@ if [[ ! -d /boot ]]; then
     export JANA_CALIB_CONTEXT=$context
     export OSG_CONTAINER_HELPER=""
     if [[ -d $oasisroot/xrootd ]]; then
-        export XROOTD_HOME=$oasisroot/xrootd/5.0.3/x86_64
+        export XROOTD_HOME=$oasisroot/xrootd/5.0.3
         export PATH=$XROOTD_HOME/bin:$PATH
         export LD_LIBRARY_PATH=$XROOTD_HOME/lib64:$LD_LIBRARY_PATH
         export LD_PRELOAD=$XROOTD_HOME/lib64/libXrdPosixPreload.so
