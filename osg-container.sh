@@ -29,9 +29,10 @@ oasisroot="$oasismount/$oasisprefix"
 userproxy=x509up_u$UID
 
 bs=/group/halld/Software/build_scripts
-dist=/group/halld/www/halldweb/html/halld_versions
-version=4.21.0
-context="variation=mc"
+dist=/group/halld/www/halldweb/html/dist
+versions=/group/halld/www/halldweb/html/halld_versions
+version=4.24.0
+context="variation=default"
 
 # define the container context for running on osg workers
 
@@ -45,7 +46,7 @@ if [[ ! -d /boot ]]; then
         echo "#!/bin/bash" > make.env
         echo '[ -z "$CLEANENV" ] && exec /bin/env -i CLEANENV=1 /bin/sh "$0" "$@"' >> make.env
         echo "unset CLEANENV" >> make.env
-        echo "source $bs/gluex_env_jlab.sh $dist/version_$version.xml" >> make.env
+        echo "source $bs/gluex_env_jlab.sh $versions/version_$version.xml" >> make.env
         echo "env > this.env" >> make.env
         bash make.env
         sort this.env \
@@ -61,7 +62,7 @@ if [[ ! -d /boot ]]; then
         exit $retcode
     elif [[ $1 = "make.tgz" ]]; then
         echo "#!/usr/bin/env -i" > make.env
-        echo "source $bs/gluex_env_jlab.sh $dist/version_$version.xml" >> make.env
+        echo "source $bs/gluex_env_jlab.sh $versions/version_$version.xml" >> make.env
         echo "env > this.env" >> make.env
         bash make.env
         sort this.env \
@@ -76,6 +77,7 @@ if [[ ! -d /boot ]]; then
         # Here is where we populate the stripped-down container tarball,
         # so add to this list any directories that need to be included.
         echo "$oasisprefix/update.details" > make.tgz
+        echo "$oasisprefix$versions" >> make.tgz
         echo "$oasisprefix$dist" >> make.tgz
         echo "$oasisprefix/xrootd" >> make.tgz
         echo "$oasisprefix/Diracxx" >> make.tgz
@@ -102,7 +104,7 @@ if [[ ! -d /boot ]]; then
         exit $retcode
     fi
     [ -r .$userproxy ] && mv .$userproxy /tmp/$userproxy
-    source $bs/gluex_env_jlab.sh $dist/version_$version.xml
+    source $bs/gluex_env_jlab.sh $versions/version_$version.xml
     export RCDB_CONNECTION=sqlite:///$dist/rcdb.sqlite
     export CCDB_CONNECTION=sqlite:///$dist/ccdb.sqlite
     export JANA_GEOMETRY_URL=ccdb://GEOMETRY/main_HDDS.xml
@@ -110,7 +112,7 @@ if [[ ! -d /boot ]]; then
     export JANA_CALIB_CONTEXT=$context
     export OSG_CONTAINER_HELPER=""
     if [[ -d $oasisroot/xrootd ]]; then
-        export XROOTD_HOME=$oasisroot/xrootd/4.9.1/x86_64
+        export XROOTD_HOME=$oasisroot/xrootd/5.0.3/x86_64
         export PATH=$XROOTD_HOME/bin:$PATH
         export LD_LIBRARY_PATH=$XROOTD_HOME/lib64:$LD_LIBRARY_PATH
         export LD_PRELOAD=$XROOTD_HOME/lib64/libXrdPosixPreload.so
