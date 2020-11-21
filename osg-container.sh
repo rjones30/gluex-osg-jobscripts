@@ -125,14 +125,16 @@ if [[ ! -d /boot ]]; then
 
 elif [[ -L $container/group || -d $container/group ]]; then
     echo "Starting up container on" `hostname`
+    thisscript=".osg-container.sh"
+    [ -r $thisscript ] || cp $0 $thisscript
     [ -r /tmp/$userproxy ] && cp /tmp/$userproxy .$userproxy
     if [[ -L $oasismount/oasis.opensciencegrid.org || -d $oasismount/oasis.opensciencegrid.org ]]; then
         echo "found oasis at $oasismount"
         exec singularity exec --containall --bind ${oasismount}:/cvmfs \
-             --home `pwd`:/srv --pwd /srv ${container} bash $0 $*
+             --home `pwd`:/srv --pwd /srv ${container} bash $thisscript $*
     elif command -v singcvmfs > /dev/null; then
         exec singcvmfs exec --containall \
-             --home `pwd`:/srv --pwd /srv ${container} bash $0 $*
+             --home `pwd`:/srv --pwd /srv ${container} bash $thisscript $*
     else
         echo "Cannot find or mount oasis filesystem!"
         echo "cvmfsexec not installed or not in path."
