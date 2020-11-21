@@ -64,7 +64,10 @@ echo "succeeded"
 echo -n "executing workscript..."
 ./workscript.bash >workscript.stdout 2>workscript.stderr
 retcode=$?
-if [ $retcode = 137 ]; then
+if [ $retcode = 139 ]; then
+    echo -n "job segfaulted..."
+    error_exit $retcode
+elif [ $retcode = 137 ]; then
     echo -n "job was killed..."
     error_exit $retcode
 elif [ $retcode != 0 ]; then
