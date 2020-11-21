@@ -92,7 +92,7 @@ def checkout_workscript(environ, output):
                       """, (cluster, process, project))
          if curr.fetchone():
             output.append("echo Job already completed, quitting.")
-            return "200 OK"
+            return = "400 Bad Request"
          curr.execute("""SELECT jobs.id, jobs.cluster, jobs.process,
                                 jobs.nstarts, projects.projectname
                          FROM jobs LEFT JOIN projects
@@ -152,7 +152,7 @@ def checkout_workscript(environ, output):
             row = curr.fetchone()
             if len(row) == 0:
                output.append("echo Nothing to do, quitting.")
-               return "200 OK"
+               return = "400 Bad Request"
             islice = int(row[0])
             iraw = int(row[2])
             block1 = int(row[3])
