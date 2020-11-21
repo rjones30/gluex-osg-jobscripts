@@ -62,7 +62,7 @@ done
 echo "succeeded"
 
 echo -n "executing workscript..."
-./osg-container.sh ./workscript.bash >workscript.stdout 2>workscript.stderr
+./workscript.bash >workscript.stdout 2>workscript.stderr
 retcode=$?
 if [ $retcode != 0 ]; then
     echo "failed with exit code $retcode"
@@ -78,7 +78,7 @@ if [ $retcode != 0 ]; then
     echo -n "sending failure log back to output collector..."
     srmcp file:///`pwd`/$flog $output_collector/$flog || report_exec $?
     echo "sent"
-    find . -maxdepth 1 -newer workscript.bash ! -type d -exec rm -f {} \;
+    find . -maxdepth 1 -newer workscript.bash ! -type d ! -name "*x509*" -exec rm -f {} \;
     rm -rf workscript.bash
     report_exit $retcode
 else
@@ -86,12 +86,12 @@ else
 fi
 
 echo -n "gathering results..."
-outfiles=`find . -maxdepth 1 -type f -newer workscript.bash`
+outfiles=`find . -maxdepth 1 -type f -newer workscript.bash ! -name "*x509*"`
 retcode=$?
-[ $retcode = 0 ] || report_exit $retcode
+[ $retcode = 0 ] || error_exit $retcode
 tarfile=job_${1}_${2}.tar.gz
 if [ -n "$outfiles" ]; then
-    tar -zcf $tarfile $outfiles || report_exit $?
+    tar -zcf $tarfile $outfiles || error_exit $?
     rm -rf $outfiles || error_exit $?
 else
     echo "no output files found!"
@@ -99,10 +99,10 @@ else
 fi
 echo "succeeded"
 echo -n "sending results tarball back to output collector..."
-srmcp file:///`pwd`/$tarfile $output_collector/$tarfile || report_exit $?
+srmcp file:///`pwd`/$tarfile $output_collector/$tarfile || error_exit $?
 echo "succeeded"
 echo -n "cleaning up..."
-find . -maxdepth 1 -newer workscript.bash ! -type d -exec rm -f {} \;
+find . -maxdepth 1 -newer workscript.bash ! -type d ! -name "*x509*" -exec rm -f {} \;
 rm -rf workscript.bash
 echo "finished"
 report_exit 0
