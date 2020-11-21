@@ -64,7 +64,10 @@ echo "succeeded"
 echo -n "executing workscript..."
 ./workscript.bash >workscript.stdout 2>workscript.stderr
 retcode=$?
-if [ $retcode != 0 ]; then
+if [ $retcode = 137 ]; then
+    echo -n "job was killed..."
+    error_exit $retcode
+elif [ $retcode != 0 ]; then
     echo "failed with exit code $retcode"
     flog=job_${1}_${2}.flog
     echo "======================" > $flog
