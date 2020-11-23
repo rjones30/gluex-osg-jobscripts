@@ -24,34 +24,34 @@
 
 function staging() {
     n=0
-    past_input=""
     for remote_input in $input_eviofile_list; do
-        if [ $n = 0 ]; then
-            local_input="$output_filename"
-        else
-            local_input="${output_filename}+$n"
-        fi
-        cat $remote_input >$local_input
-        cat /dev/null >wait$n && rm wait$n
-        [ -n "$past_input" ] && rm -f $past_input
-        past_input=$local_input
+        echo "staging loop: fetching $remote_input"
+        cat $remote_input >staging.evio
+        echo -n "staging loop: waiting..."
+        [ $n -gt 0 ] && cat /dev/null >waitout
+        echo "injecting into input sequence"
+        rm -f $output_filename
+        mv staging.evio $output_filename
+        echo -n "staging loop: waiting..."
+        cat /dev/null >waitin
+        echo "block processing started"
         n=`expr $n + 1`
     done   
-    cat /dev/null >wait$n && rm wait$n
-    rm -f $past_input
+    echo -n "staging loop: waiting..."
+    cat /dev/null >waitout
+    echo "finished!"
+    rm -f $output_filename
+    rm -f waitin waitout
 }
 
 n=0
+local_input_list=""
 for rawdata in $input_eviofile_list; do
-    if [ $n = 0 ]; then
-        local_input_list="wait0 $output_filename"
-    else
-        local_input_list="$local_input_list wait$n ${output_filename}+$n"
-    fi
-    mkfifo wait$n
+    local_input_list="$local_input_list waitin $output_filename waitout"
     n=`expr $n + 1`
 done   
-mkfifo wait$n
+mkfifo waitin
+mkfifo waitout
 
 staging &
 
