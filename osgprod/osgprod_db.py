@@ -198,5 +198,6 @@ def db_open():
       cursor.execute("SELECT version();")
       record = cursor.fetchone()
       print("Connected to ", record)
+   return conn
 
 connection = db_open()
