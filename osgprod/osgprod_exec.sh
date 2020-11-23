@@ -62,7 +62,7 @@ done
 echo "succeeded"
 
 echo -n "executing workscript..."
-./workscript.bash >workscript.stdout 2>workscript.stderr
+./osg-container.sh ./workscript.bash >workscript.stdout 2>workscript.stderr
 retcode=$?
 if [ $retcode = 139 ]; then
     echo -n "job segfaulted..."
