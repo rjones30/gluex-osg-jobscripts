@@ -35,10 +35,10 @@ def db_connection():
    """
    Returns a persistent connection to the osgprod database.
    """
+   global dbconnection
    try:
       conn = dbconnection
    except:
-      global dbconnection
       dbconnection = psycopg2.connect(user = dbuser,
                                       password = dbpass,
                                       host = dbserver,
@@ -92,7 +92,7 @@ def checkout_workscript(environ, output):
                       """, (cluster, process, project))
          if curr.fetchone():
             output.append("echo Job already completed, quitting.")
-            return "400 Bad Request"
+            return "200 OK"
          curr.execute("""SELECT jobs.id, jobs.cluster, jobs.process,
                                 jobs.nstarts, projects.projectname
                          FROM jobs LEFT JOIN projects
@@ -151,8 +151,8 @@ def checkout_workscript(environ, output):
                          """)
             row = curr.fetchone()
             if len(row) == 0:
-               output.append("echo Nothing to do, quitting.")
-               return "400 Bad Request"
+               output.append("echo No work left to do, quitting.")
+               return "200 OK"
             islice = int(row[0])
             iraw = int(row[2])
             block1 = int(row[3])
@@ -264,9 +264,9 @@ def application(environ, start_response):
       status = "200 OK"
    elif "PATH_INFO" in environ and environ["PATH_INFO"]:
       if environ["PATH_INFO"] == "/workscript.bash":
-         if True:#try:
+         try:
             status = checkout_workscript(environ, output)
-         else: #except:
+         except:
             status = "400 Bad Request"
             output = [""]
       elif environ["PATH_INFO"] == "/workscript.exit":
