@@ -59,6 +59,7 @@ done
 mkfifo waitin
 mkfifo waitout
 
+set -m
 staging & readloop_pid=$!
 
 BATCH_MODE=1
