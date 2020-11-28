@@ -62,10 +62,13 @@ done
 echo "succeeded"
 
 echo -n "executing workscript..."
-./osg-container.sh ./workscript.bash >workscript.stdout 2>workscript.stderr
+./workscript.bash >workscript.stdout 2>workscript.stderr
 retcode=$?
 if [ $retcode = 139 ]; then
     echo -n "job segfaulted..."
+    error_exit $retcode
+elif [ $retcode = 134 ]; then
+    echo -n "job was aborted..."
     error_exit $retcode
 elif [ $retcode = 137 ]; then
     echo -n "job was killed..."
