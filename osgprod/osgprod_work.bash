@@ -46,7 +46,7 @@ function staging() {
 
 function safe_exit() {
     rm -f waitin waitout
-    [ -n "$readloop_pid" ] && kill -SIGTERM -$readloop_pid
+    [ -n "$readloop_pid" ] && kill -TERM -$readloop_pid
     exit $1
 }
 
