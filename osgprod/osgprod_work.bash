@@ -44,6 +44,12 @@ function staging() {
     rm -f waitin waitout
 }
 
+function safe_exit() {
+    rm -f waitin waitout
+    [ -n "$readloop_pid" ] && kill -SIGTERM -$readloop_pid
+    exit $1
+}
+
 n=0
 local_input_list=""
 for rawdata in $input_eviofile_list; do
@@ -53,7 +59,7 @@ done
 mkfifo waitin
 mkfifo waitout
 
-staging &
+staging & readloop_pid=$!
 
 BATCH_MODE=1
 hd_root="hd_root --config=hd_recon.config \
@@ -62,7 +68,8 @@ hd_root="hd_root --config=hd_recon.config \
                  -PTHREAD_TIMEOUT_FIRST_EVENT=3600 \
                  -PTHREAD_TIMEOUT=600 \
                  -p --nthreads=$NTHREADS"
-$hd_root $local_input_list || exit $?
+$hd_root $local_input_list || safe_exit $?
 
 rm -rf $local_input_list
 touch hd_recon.config
+safe_exit 0
