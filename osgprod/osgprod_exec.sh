@@ -85,7 +85,7 @@ elif [ $retcode != 0 ]; then
     echo "======================" >> $flog
     cat workscript.stderr >> $flog
     echo -n "sending failure log back to output collector..."
-    srmcp file:///`pwd`/$flog $output_collector/$flog || report_exec $?
+    srmcp file:///`pwd`/$flog $output_collector/$flog || report_exit $?
     echo "sent"
     find . -maxdepth 1 -newer workscript.bash ! -type d ! -name "*x509*" -exec rm -f {} \;
     rm -rf workscript.bash
