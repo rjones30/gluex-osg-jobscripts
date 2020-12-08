@@ -46,7 +46,7 @@ function staging() {
 
 function safe_exit() {
     rm -f waitin waitout
-    [ -n "$readloop_pid" ] && kill -TERM -$readloop_pid
+    [ -n "$readloop_pid" ] && kill -TERM -$readloop_pid 2>/dev/null
     exit $1
 }
 
@@ -64,6 +64,7 @@ staging & readloop_pid=$!
 
 BATCH_MODE=1
 hd_root="hd_root --config=hd_recon.config \
+                 -PEVIO:TREAT_TRUNCATED_AS_ERROR=0 \
                  -PJANA:BATCH_MODE=$BATCH_MODE \
                  -PNTHREADS=$NTHREADS \
                  -PTHREAD_TIMEOUT_FIRST_EVENT=3600 \
