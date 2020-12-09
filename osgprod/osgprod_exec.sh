@@ -79,7 +79,7 @@ elif [ $retcode != 0 ]; then
     echo "======================" > $flog
     echo "Failed job stdout log:" >> $flog
     echo "======================" >> $flog
-    cat workscript.stdout >> flog
+    cat workscript.stdout >> $flog
     echo "======================" >> $flog
     echo "Failed job stderr log:" >> $flog
     echo "======================" >> $flog
