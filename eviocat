@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# eviocat - shell wrapper around the evioCat utility.
+#
+# author: richard.t.jones at uconn.edu
+# version: december 9, 2020
+
+[ -r .eviocat ] || cp $0 .eviocat
+
+if [ ! -d /group/halld ]; then
+    exec osg-container ./.eviocat $*
+fi
+
+cat <<EOI >.eviocat.py
+#!/usr/bin/env python3
+
+import sys
+import struct
+
+def usage():
+   print("Usage: eviocat [options] <input_file> [<input_file2> ... ]")
+   print(" where options include any of the following:")
+   print("   -o <output_file> : overrides default output to stdout")
+   sys.exit(1)
+
+if len(sys.argv) < 2:
+   usage()
+
+argc = 1
+fout = sys.stdout.buffer
+while argc < len(sys.argv):
+   if sys.argv[argc] == "-o":
+      fout = open(sys.argv[argc + 1], "wb")
+      argc += 1
+   elif sys.argv[argc][0] == "-":
+      usage()
+   else:
+      break
+   argc += 1
+
+blockno = 0
+for infile in sys.argv[argc:]:
+   with open(infile, "rb") as fin:
+      while True:
+         buf = fin.read(32)
+         head = struct.unpack(">IIIIIIII", buf)
+         if head[7] != 0xc0da0100:
+            print("corrupted block at", blockno)
+            for c in buf:
+               print(hex(c), end="")
+            print()
+            sys.exit(8)
+         length = head[0] - head[2]
+         if length > 0:
+            blockno += 1
+            rehead = [h for h in head]
+            rehead[1] = blockno
+            buf = struct.pack(">IIIIIIII", *rehead)
+            fout.write(buf)
+            fout.write(fin.read(length * 4))
+         else:
+            break
+blockno += 1
+rehead = [h for h in head]
+rehead[1] = blockno
+buf = struct.pack(">IIIIIIII", *rehead)
+fout.write(buf)
+EOI
+
+chmod +x .eviocat.py
+./.eviocat.py $*
