@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# hddmcat - shell wrapper around the hddmcat utility.
+#
+# author: richard.t.jones at uconn.edu
+# version: december 9, 2020
+
+[ -r .hddmcat ] || cp $0 .hddmcat
+
+if [ ! -d /group/halld ]; then
+    exec osg-container ./.hddmcat $*
+fi
+
+if [ "$1" = "-o" ]; then
+    outfile=$2
+    shift
+    shift
+    hddmcat $* >$outfile
+else
+    hddmcat $*
+fi

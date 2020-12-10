@@ -1,0 +1,69 @@
+#!/bin/bash
+#
+# hddm_rcat - shell wrapper around the hddm_rcat.py utility.
+#
+# author: richard.t.jones at uconn.edu
+# version: december 9, 2020
+
+[ -r .hddm_rcat ] || cp $0 .hddm_rcat
+
+if [ ! -d /group/halld ]; then
+    exec osg-container ./.hddm_rcat $*
+fi
+
+cat <<EOI >.hddm_rcat.py
+#!/usr/bin/env python3
+
+import sys
+import hddm_r
+
+def usage():
+   print("Usage: hddm_rcat [options] <input_file> [<input_file2> ... ]")
+   print(" where options include any of the following:")
+   print("   -o <output_file> : overrides default output rest.hddm")
+   print("   -z : enables in-flight zip compression of data stream")
+   print("   -bz : enables in-flight bzip2 compression of data stream")
+   print("   -c : enables in-flight data integrity checks")
+   sys.exit(1)
+
+comp_z = 0;
+comp_bz = 0;
+check_i = 0;
+
+if len(sys.argv) < 2:
+   usage()
+
+argc = 1
+outfile = "rest.hddm"
+while argc < len(sys.argv):
+   if sys.argv[argc] == "-o":
+      outfile = sys.argv[argc + 1]
+      argc += 1
+   elif sys.argv[argc] == "-z":
+      comp_z = 1
+   elif sys.argv[argc] == "-bz":
+      comp_bz = 1
+   elif sys.argv[argc] == "-c":
+      check_i = 1
+   elif sys.argv[argc][0] == "-":
+      usage()
+   else:
+      break
+   argc += 1
+
+fout = hddm_r.ostream(outfile)
+if comp_z:
+   fout.compression = hddm_r.k_z_compression
+if comp_bz:
+   fout.compression = hddm_r.k_bz2_compression
+if check_i:
+   fout.integrityChecks = hddm_r.k_crc32_integrity
+for infile in sys.argv[argc:]:
+   for rec in hddm_r.istream(infile):
+      fout.write(rec)
+EOI
+
+export PYTHONPATH=/cvmfs/oasis.opensciencegrid.org/gluex/python3:$PYTHONPATH
+export LD_LIBRARY_PATH=/cvmfs/oasis.opensciencegrid.org/gluex/python3:$LD_LIBRARY_PATH
+chmod +x .hddm_rcat.py
+./.hddm_rcat.py $*
