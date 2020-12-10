@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# hadd - shell wrapper around the root hadd utility.
+#
+# author: richard.t.jones at uconn.edu
+# version: december 9, 2020
+
+[ -r .hadd ] || cp $0 .hadd
+
+if [ ! -d /group/halld ]; then
+    exec osg-container ./.hadd $*
+fi
+
+$ROOTSYS/bin/hadd $*
