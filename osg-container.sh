@@ -34,14 +34,22 @@ versions=/group/halld/www/halldweb/html/halld_versions
 version=4.24.0
 context="variation=default"
 
+if [[ "$1" = "-v" ]]; then
+    echo verbosity!!
+    verbose=$1
+    shift
+fi
+
 # define the container context for running on osg workers
 
 # check if we are already inside the container -- no foolproof way to do this!!
 if [[ ! -d /boot ]]; then
-    echo "Job running on" `hostname`
-    echo "=== Contents of $oasisroot/update.details: ==="
-    cat $oasisroot/update.details
-    echo "=========================================================================="
+    if [ -n "$verbose" ]; then
+        echo "Job running on" `hostname`
+        echo "=== Contents of $oasisroot/update.details: ==="
+        cat $oasisroot/update.details
+        echo "=========================================================================="
+    fi
     if [[ $1 = "make.env" ]]; then
         echo "#!/bin/bash" > make.env
         echo '[ -z "$CLEANENV" ] && exec /bin/env -i CLEANENV=1 /bin/sh "$0" "$@"' >> make.env
@@ -120,21 +128,27 @@ if [[ ! -d /boot ]]; then
         unset LD_PRELOAD
     fi
     $* ; retcode=$?
-    echo "Job finished with exit code" $retcode
+    if [ -n "$verbose" ]; then
+        echo "Job finished with exit code" $retcode
+    fi
     exit $retcode
 
 elif [[ -L $container/group || -d $container/group ]]; then
-    echo "Starting up container on" `hostname`
+    if [ -n "$verbose" ]; then
+        echo "Starting up container on" `hostname`
+    fi
     thisscript=".osg-container.sh"
     [ -r $thisscript ] || cp $0 $thisscript
     [ -r /tmp/$userproxy ] && cp /tmp/$userproxy .$userproxy
     if [[ -L $oasismount/oasis.opensciencegrid.org || -d $oasismount/oasis.opensciencegrid.org ]]; then
-        echo "found oasis at $oasismount"
+        if [ -n "$verbose" ]; then
+            echo "found oasis at $oasismount"
+        fi
         exec singularity exec --containall --bind ${oasismount}:/cvmfs \
-             --home `pwd`:/srv --pwd /srv ${container} bash $thisscript $*
+             --home `pwd`:/srv --pwd /srv ${container} bash $thisscript $verbose $*
     elif command -v singcvmfs > /dev/null; then
         exec singcvmfs exec --containall \
-             --home `pwd`:/srv --pwd /srv ${container} bash $thisscript $*
+             --home `pwd`:/srv --pwd /srv ${container} bash $thisscript $verbose $*
     else
         echo "Cannot find or mount oasis filesystem!"
         echo "cvmfsexec not installed or not in path."
