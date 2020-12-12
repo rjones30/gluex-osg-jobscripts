@@ -9,7 +9,9 @@
 # version: december 8, 2020
 
 import os
-import re
+import sys
+import time
+import random
 import struct
 import psycopg2
 import subprocess
@@ -20,8 +22,10 @@ dbname = "osgprod"
 dbuser = "gluex"
 dbpass = "slicing+dicing"
 
-input_area = "/dcache/gluex/resilient"
-output_area = "/dcache/gluex/resilient/recon/ver01"
+xrootd_url = "root://cn442.storrs.hpc.uconn.edu"
+srm_url = "srm://cn446.storrs.hpc.uconn.edu:8443"
+input_area = "/gluex/resilient"
+output_area = "/gluex/resilient/recon/ver01"
 
 def db_connection():
    """
@@ -40,28 +44,27 @@ def db_connection():
    return conn
 
 def create_table_bindings(delete=False):
-   with db_connection().cursor() as cursor:
-      if delete:
-         cursor.execute("DROP TABLE bindings;")
-      cursor.execute("""CREATE TABLE bindings
-                        (id          SERIAL  PRIMARY KEY     NOT NULL,
-                         iraw        INT     REFERENCES rawdata(id),
-                         starttime   TIMESTAMP WITH TIME ZONE,
-                         endtime     TIMESTAMP WITH TIME ZONE,
-                         exitcode    INT,
-                         UNIQUE(iraw));
-                     """)
-   dbconnection.commit()
+   with db_connection().cursor() as conn:
+      with conn.cursor() as curs:
+         if delete:
+            curs.execute("DROP TABLE bindings;")
+         curs.execute("""CREATE TABLE bindings
+                         (id          SERIAL  PRIMARY KEY     NOT NULL,
+                          iraw        INT     REFERENCES rawdata(id),
+                          starttime   TIMESTAMP WITH TIME ZONE,
+                          endtime     TIMESTAMP WITH TIME ZONE,
+                          exitcode    INT,
+                          UNIQUE(iraw));
+                      """)
 
 def init_output_area(area):
    """
    Creates the directory structure in output_area to receive the
    merged results from this module.
    """
-   for i in range(2, len(area)):
-      subdir = "/".join(area.split("/")[:i])
-      if not os.path.isdir(subdir):
-         os.mkdir(subdir)
+   return subprocess.call(["gfal-mkdir", srm_url + area],
+                          stdout = subprocess.DEVNULL,
+                          stderr = subprocess.STDOUT)
 
 def next():
    """
@@ -76,56 +79,63 @@ def next():
    iraw = 0
    run = 0
    seqno = 0
-   with db_connection().cursor() as cursor:
-      cursor.execute("""SELECT rawdata.id,rawdata.run,rawdata.seqno,
-                               rawdata.nblocks,slices.block1,slices.block2,
-                               jobs.cluster,jobs.process
-                        FROM rawdata
-                        LEFT JOIN bindings
-                        ON bindings.iraw = rawdata.id
-                        INNER JOIN slices
-                        ON slices.iraw = rawdata.id
-                        INNER JOIN jobs
-                        ON slices.ijob = jobs.id
-                        WHERE bindings.id IS NULL
-                        AND jobs.exitcode = 0
-                        ORDER BY rawdata.id,slices.block1;
-                     """)
-      blocks2do = {}
-      for row in cursor.fetchall():
-         i = int(row[0])
-         if i != iraw:
-            if len(blocks2do) == 1:
-               break
+   with db_connection() as conn:
+      with conn.cursor() as curs:
+         try:
+            curs.execute("""SELECT rawdata.id,rawdata.run,rawdata.seqno,
+                                   rawdata.nblocks,slices.block1,slices.block2,
+                                   jobs.cluster,jobs.process
+                            FROM rawdata
+                            LEFT JOIN bindings
+                            ON bindings.iraw = rawdata.id
+                            INNER JOIN slices
+                            ON slices.iraw = rawdata.id
+                            INNER JOIN jobs
+                            ON slices.ijob = jobs.id
+                            WHERE bindings.id IS NULL
+                            AND jobs.exitcode = 0
+                            ORDER BY rawdata.id,slices.block1
+                            LIMIT 100;
+                         """)
+            blocks2do = {}
+            for row in curs.fetchall():
+               i = int(row[0])
+               if i != iraw:
+                  if len(blocks2do) == 1:
+                     break
+                  else:
+                     run = int(row[1])
+                     seqno = int(row[2])
+                     nblocks = int(row[3])
+                     blocks2do = set(range(0,nblocks))
+                     slices = []
+                     iraw = i
+               block1 = int(row[4])
+               block2 = int(row[5])
+               blocks2do ^= set(range(block1,block2))
+               cluster = int(row[6])
+               process = int(row[7])
+               slices.append((block1,block2,cluster,process))
+            if len(blocks2do) != 1:
+               return 0
             else:
-               run = int(row[1])
-               seqno = int(row[2])
-               nblocks = int(row[3])
-               blocks2do = set(range(0,nblocks))
-               slices = []
-               iraw = i
-         block1 = int(row[4])
-         block2 = int(row[5])
-         blocks2do ^= set(range(block1,block2))
-         cluster = int(row[6])
-         process = int(row[7])
-         slices.append((block1,block2,cluster,process))
-      if len(blocks2do) != 1:
-         return 0
-      else:
-         cursor.execute("SELECT TIMEZONE('GMT', NOW());")
-         now = cursor.fetchone()[0]
-         cursor.execute("""INSERT INTO bindings
-                           (iraw,starttime)
-                           VALUES (%s,%s)
-                           RETURNING id;
-                        """, (iraw, now))
-         row = cursor.fetchone()
-         if row:
-            ibind = int(row[0])
-         else:
-            return 0
-      db_connection().commit()
+               curs.execute("SELECT TIMEZONE('GMT', NOW());")
+               now = curs.fetchone()[0]
+               curs.execute("""INSERT INTO bindings
+                               (iraw,starttime)
+                               VALUES (%s,%s)
+                               RETURNING id;
+                            """, (iraw, now))
+               row = curs.fetchone()
+               if row:
+                  ibind = int(row[0])
+               else:
+                  return 0
+         except:
+            iraw = 0
+   if iraw == 0:
+      time.sleep(random.randint(1,30))
+      return -9 # collision
 
    workdir = str(iraw)
    os.mkdir(workdir)
@@ -133,27 +143,60 @@ def next():
    for sl in slices:
       sdir = str(sl[0]) + "," + str(sl[1])
       os.mkdir(sdir)
-      untar = ["tar", "zxf", input_area + "/" +
-               "job_{0}_{1}.tar.gz".format(sl[2], sl[3]),
-               "-C", sdir]
+      tarfile = "job_{0}_{1}.tar.gz".format(sl[2], sl[3])
+      tarpath = input_area + "/" + tarfile
+      try:
+         subprocess.check_output(["gfal-copy", srm_url + tarpath,
+                                  "file://" + os.getcwd() + "/" + tarfile])
+      except:
+         sys.stderr.write("Error -999 on rawdata id {0}".format(iraw) +
+                          " - job output " + tarfile + " is missing!\n")
+         sys.stderr.flush()
+         with db_connection() as conn:
+            with conn.cursor() as curs:
+               curs.execute("SELECT TIMEZONE('GMT', NOW());")
+               now = curs.fetchone()[0]
+               curs.execute("""UPDATE bindings
+                               SET endtime=%s, exitcode=%s
+                               WHERE id = %s;
+                            """, (now, -999, ibind))
+         os.chdir("..")
+         shutil.rmtree(workdir)
+         return 1
+      untar = ["tar", "zxf", tarfile, "-C", sdir]
       if subprocess.Popen(untar).wait() != 0:
-         return 0
+         sys.stderr.write("Error -998 on rawdata id {0}".format(iraw) +
+                          " - job output " + tarfile + " is not readable!\n")
+         sys.stderr.flush()
+         with db_connection() as comm:
+            with conn.cursor() as curs:
+               curs.execute("SELECT TIMEZONE('GMT', NOW());")
+               now = curs.fetchone()[0]
+               curs.execute("""UPDATE bindings
+                               SET endtime=%s, exitcode=%s
+                               WHERE id = %s;
+                            """, (now, -998, ibind))
+         os.chdir("..")
+         shutil.rmtree(workdir)
+         return 1
+      else:
+         os.remove(tarfile)
+
    exitcode = 0
    exitcode += merge_evio_skims(run, seqno, slices)
    exitcode += merge_hddm_output(run, seqno, slices)
    exitcode += merge_job_info(run, seqno, slices)
    exitcode += merge_root_histos(run, seqno, slices)
+   with db_connection() as comm:
+      with conn.cursor() as curs:
+         curs.execute("SELECT TIMEZONE('GMT', NOW());")
+         now = curs.fetchone()[0]
+         curs.execute("""UPDATE bindings
+                         SET endtime=%s, exitcode=%s
+                         WHERE id = %s;
+                      """, (now, exitcode, ibind))
    os.chdir("..")
    shutil.rmtree(workdir)
-
-   with db_connection().cursor() as cursor:
-      cursor.execute("SELECT TIMEZONE('GMT', NOW());")
-      now = cursor.fetchone()[0]
-      cursor.execute("""UPDATE bindings
-                        SET endtime=%s, exitcode=%s
-                        WHERE id = %s;
-                     """, (now, exitcode, ibind))
-      db_connection().commit()
    return 1
 
 def merge_evio_skims(run, seqno, slices):
@@ -188,13 +231,16 @@ def merge_evio_skims(run, seqno, slices):
                ]
       cmd = ["eviocat", "-o", ofile] + ifiles
       if subprocess.Popen(cmd).wait() != 0:
-         return -1
+         sys.stderr.write("Error on output file {0}".format(ofile) +
+                          " - evio file merging failed!\n")
+         sys.stderr.flush()
+         return -1 # output data files unreadable
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       init_output_area(odir)
       opath = odir + "/" + ofile
-      if os.path.exists(opath):
-         os.remove(opath)
-      shutil.copyfile(ofile, opath)
+      subprocess.check_output(["gfal-copy", "-f",
+                               "file://" + os.getcwd() + "/" + ofile,
+                               srm_url + opath])
    return 0
 
 def merge_root_histos(run, seqno, slices):
@@ -229,13 +275,16 @@ def merge_root_histos(run, seqno, slices):
                ]
       cmd = ["hadd", ofile] + ifiles
       if subprocess.Popen(cmd).wait() != 0:
+         sys.stderr.write("Error on output file {0}".format(ofile) +
+                          " - root file merging failed!\n")
+         sys.stderr.flush()
          return -1
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       init_output_area(odir)
       opath = odir + "/" + ofile
-      if os.path.exists(opath):
-         os.remove(opath)
-      shutil.copyfile(ofile, opath)
+      subprocess.check_output(["gfal-copy", "-f",
+                               "file://" + os.getcwd() + "/" + ofile,
+                               srm_url + opath])
    return 0
 
 def merge_hddm_output(run, seqno, slices):
@@ -261,13 +310,16 @@ def merge_hddm_output(run, seqno, slices):
          ifiles.append(ifile)
       cmd = ["hddmcat", "-o", ofile] + ifiles
       if subprocess.Popen(cmd).wait() != 0:
+         sys.stderr.write("Error on output file {0}".format(ofile) +
+                          " - hddm file merging failed!\n")
+         sys.stderr.flush()
          return -1
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       init_output_area(odir)
       opath = odir + "/" + ofile
-      if os.path.exists(opath):
-         os.remove(opath)
-      shutil.copyfile(ofile, opath)
+      subprocess.check_output(["gfal-copy", "-f",
+                               "file://" + os.getcwd() + "/" + ofile,
+                               srm_url + opath])
    return 0
 
 def merge_job_info(run, seqno, slices):
@@ -295,11 +347,23 @@ def merge_job_info(run, seqno, slices):
       tarfile = tarset[iset].format(run, seqno)
       cmd = ["tar", "zcf", tarfile] + outlist
       if subprocess.Popen(cmd).wait() != 0:
+         sys.stderr.write("Error on output file {0}".format(tarfile) +
+                          " - job logs tarballing failed!\n")
+         sys.stderr.flush()
          return -1
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       init_output_area(odir)
-      opath = odir + "/" + ofile
-      if os.path.exists(opath):
-         os.remove(opath)
-      shutil.copyfile(ofile, opath)
+      opath = odir + "/" + tarfile
+      subprocess.check_output(["gfal-copy", "-f",
+                               "file://" + os.getcwd() + "/" + ofile,
+                               srm_url + opath])
    return 0
+
+# default action is to exit on the first error
+
+while True:
+   resp = next()
+   if 0 * resp != 0:
+      print("next() returns", resp)
+      continue
+   sys.exit(resp)
