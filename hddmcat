@@ -19,3 +19,14 @@ if [ "$1" = "-o" ]; then
 else
     hddmcat $*
 fi
+retcode=$?
+if [ $retcode != 0 ]; then
+    while [ $# -gt 0 ]; do
+        hddmcat $1 >/dev/null
+        if [ $? != 0 ]; then
+            echo "Error - hddm output file $1 unreadable" >&2
+        fi
+        shift
+    done
+    exit $retcode
+fi

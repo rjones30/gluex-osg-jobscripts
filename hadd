@@ -12,3 +12,8 @@ if [ ! -d /group/halld ]; then
 fi
 
 $ROOTSYS/bin/hadd $*
+retcode=$?
+if [ $retcode != 0 ]; then
+    echo "Error - corrupted root file somewhere in set $1" >&2
+    exit $retcode
+fi

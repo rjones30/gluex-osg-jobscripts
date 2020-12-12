@@ -43,12 +43,17 @@ for infile in sys.argv[argc:]:
    with open(infile, "rb") as fin:
       while True:
          buf = fin.read(32)
+         if len(buf) != 32:
+            sys.stderr.write("Error - evio file {0} is truncated at block {1}\n"
+                             .format(infile,blockno))
+            sys.exit(7)
          head = struct.unpack(">IIIIIIII", buf)
          if head[7] != 0xc0da0100:
-            print("corrupted block at", blockno)
+            sys.stderr.write("Error - corrupted block in {0} at block {1}\n"
+                             .format(infile, blockno))
             for c in buf:
-               print(hex(c), end="")
-            print()
+               sys.stderr.write(hex(c))
+            sys.stderr.write("\n")
             sys.exit(8)
          length = head[0] - head[2]
          if length > 0:
