@@ -23,9 +23,12 @@ dbuser = "gluex"
 dbpass = "slicing+dicing"
 
 xrootd_url = "root://cn442.storrs.hpc.uconn.edu"
-srm_url = "srm://cn446.storrs.hpc.uconn.edu:8443"
+src_url = "srm://cn446.storrs.hpc.uconn.edu:8443"
+dst_url = "gsiftp://scosg16.jlab.org/osgpool/halld/jonesrt/RunPeriod-2019-11"
+dst_dn = "/C=US/O=Globus Consortium/OU=Globus Connect Service/CN=226c2da8-5236-11e9-a620-0a54e005f950"
+dst_cred = os.path.expanduser("~") + "/.globus/proxy_scosg16"
 input_area = "/gluex/resilient"
-output_area = "/gluex/resilient/recon/ver01"
+output_area = "/recon/ver01"
 
 def db_connection():
    """
@@ -57,14 +60,31 @@ def create_table_bindings(delete=False):
                           UNIQUE(iraw));
                       """)
 
-def init_output_area(area):
+def upload(outfile, outdir):
    """
-   Creates the directory structure in output_area to receive the
-   merged results from this module.
+   Uploads outfile to the storage element at dst_url under
+   output directory outdir, returns 0 on success, raises an
+   exception on error.
    """
-   return subprocess.call(["gfal-mkdir", srm_url + area],
-                          stdout = subprocess.DEVNULL,
-                          stderr = subprocess.STDOUT)
+   outpath = outdir + "/" + outfile
+   my_env = os.environ.copy()
+   my_env["X509_USER_PROXY"] = dst_cred
+   for retry in range(0,99):
+      try:
+         subprocess.check_output(["globus-url-copy", "-create-dest",
+                                  "-rst", "-stall-timeout", "300",
+                                  "-ds", dst_dn, "-dst-cred", dst_cred,
+                                  "file://" + os.getcwd() + "/" + outfile,
+                                  dst_url + outpath], env=my_env)
+         return 0
+      except:
+         continue
+   subprocess.check_output(["globus-url-copy", "-create-dest",
+                            "-rst", "-stall-timeout", "300",
+                            "-ds", dst_dn, "-dst-cred", dst_cred,
+                            "file://" + os.getcwd() + "/" + outfile,
+                            dst_url + outpath], env=my_env)
+   return 0
 
 def next():
    """
@@ -95,7 +115,7 @@ def next():
                             WHERE bindings.id IS NULL
                             AND jobs.exitcode = 0
                             ORDER BY rawdata.id,slices.block1
-                            LIMIT 100;
+                            LIMIT 2000;
                          """)
             blocks2do = {}
             for row in curs.fetchall():
@@ -146,7 +166,7 @@ def next():
       tarfile = "job_{0}_{1}.tar.gz".format(sl[2], sl[3])
       tarpath = input_area + "/" + tarfile
       try:
-         subprocess.check_output(["gfal-copy", srm_url + tarpath,
+         subprocess.check_output(["gfal-copy", src_url + tarpath,
                                   "file://" + os.getcwd() + "/" + tarfile])
       except:
          sys.stderr.write("Error -999 on rawdata id {0}".format(iraw) +
@@ -236,11 +256,7 @@ def merge_evio_skims(run, seqno, slices):
          sys.stderr.flush()
          return -1 # output data files unreadable
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
-      init_output_area(odir)
-      opath = odir + "/" + ofile
-      subprocess.check_output(["gfal-copy", "-f",
-                               "file://" + os.getcwd() + "/" + ofile,
-                               srm_url + opath])
+      upload(ofile, odir)
    return 0
 
 def merge_root_histos(run, seqno, slices):
@@ -280,11 +296,7 @@ def merge_root_histos(run, seqno, slices):
          sys.stderr.flush()
          return -1
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
-      init_output_area(odir)
-      opath = odir + "/" + ofile
-      subprocess.check_output(["gfal-copy", "-f",
-                               "file://" + os.getcwd() + "/" + ofile,
-                               srm_url + opath])
+      upload(ofile, odir)
    return 0
 
 def merge_hddm_output(run, seqno, slices):
@@ -315,11 +327,7 @@ def merge_hddm_output(run, seqno, slices):
          sys.stderr.flush()
          return -1
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
-      init_output_area(odir)
-      opath = odir + "/" + ofile
-      subprocess.check_output(["gfal-copy", "-f",
-                               "file://" + os.getcwd() + "/" + ofile,
-                               srm_url + opath])
+      upload(ofile, odir)
    return 0
 
 def merge_job_info(run, seqno, slices):
@@ -352,18 +360,14 @@ def merge_job_info(run, seqno, slices):
          sys.stderr.flush()
          return -1
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
-      init_output_area(odir)
-      opath = odir + "/" + tarfile
-      subprocess.check_output(["gfal-copy", "-f",
-                               "file://" + os.getcwd() + "/" + ofile,
-                               srm_url + opath])
+      upload(tarfile, odir)
    return 0
 
 # default action is to exit on the first error
 
 while True:
    resp = next()
-   if 0 * resp != 0:
+   if resp != 0:
       print("next() returns", resp)
       continue
    sys.exit(resp)
