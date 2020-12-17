@@ -16,6 +16,7 @@ import struct
 import psycopg2
 import subprocess
 import shutil
+import re
 
 dbserver = "cn445.storrs.hpc.uconn.edu"
 dbname = "osgprod"
@@ -57,6 +58,7 @@ def create_table_bindings(delete=False):
                           starttime   TIMESTAMP WITH TIME ZONE,
                           endtime     TIMESTAMP WITH TIME ZONE,
                           exitcode    INT,
+                          details     TEXT,
                           UNIQUE(iraw));
                       """)
 
@@ -160,6 +162,7 @@ def next():
    workdir = str(iraw)
    os.mkdir(workdir)
    os.chdir(workdir)
+   badslices = []
    for sl in slices:
       sdir = str(sl[0]) + "," + str(sl[1])
       os.mkdir(sdir)
@@ -172,49 +175,47 @@ def next():
          sys.stderr.write("Error -999 on rawdata id {0}".format(iraw) +
                           " - job output " + tarfile + " is missing!\n")
          sys.stderr.flush()
-         with db_connection() as conn:
-            with conn.cursor() as curs:
-               curs.execute("SELECT TIMEZONE('GMT', NOW());")
-               now = curs.fetchone()[0]
-               curs.execute("""UPDATE bindings
-                               SET endtime=%s, exitcode=%s
-                               WHERE id = %s;
-                            """, (now, -999, ibind))
-         os.chdir("..")
-         shutil.rmtree(workdir)
-         return 1
-      untar = ["tar", "zxf", tarfile, "-C", sdir]
-      if subprocess.Popen(untar).wait() != 0:
-         sys.stderr.write("Error -998 on rawdata id {0}".format(iraw) +
+         badslices.append(sdir)
+         continue
+      try:
+         subprocess.check_output(["tar", "zxf", tarfile, "-C", sdir])
+      except:
+         sys.stderr.write("Error -999 on rawdata id {0}".format(iraw) +
                           " - job output " + tarfile + " is not readable!\n")
          sys.stderr.flush()
-         with db_connection() as comm:
-            with conn.cursor() as curs:
-               curs.execute("SELECT TIMEZONE('GMT', NOW());")
-               now = curs.fetchone()[0]
-               curs.execute("""UPDATE bindings
-                               SET endtime=%s, exitcode=%s
-                               WHERE id = %s;
-                            """, (now, -998, ibind))
-         os.chdir("..")
-         shutil.rmtree(workdir)
-         return 1
-      else:
+         badslices.append(sdir)
+      finally:
          os.remove(tarfile)
+   if len(badslices) > 0:
+      with db_connection() as conn:
+         with conn.cursor() as curs:
+            curs.execute("SELECT TIMEZONE('GMT', NOW());")
+            now = curs.fetchone()[0]
+            curs.execute("""UPDATE bindings
+                            SET endtime=%s, 
+                                exitcode=%s,
+                                details=%s
+                            WHERE id = %s;
+                         """, (now, -999, ":".join(badslices), ibind))
+      os.chdir("..")
+      shutil.rmtree(workdir)
+      return 1
 
-   exitcode = 0
-   exitcode += merge_evio_skims(run, seqno, slices)
-   exitcode += merge_hddm_output(run, seqno, slices)
-   exitcode += merge_job_info(run, seqno, slices)
-   exitcode += merge_root_histos(run, seqno, slices)
+   badslices += merge_evio_skims(run, seqno, slices)
+   badslices += merge_hddm_output(run, seqno, slices)
+   badslices += merge_job_info(run, seqno, slices)
+   badslices += merge_root_histos(run, seqno, slices)
+   exitcode = -len(badslices)
    with db_connection() as comm:
       with conn.cursor() as curs:
          curs.execute("SELECT TIMEZONE('GMT', NOW());")
          now = curs.fetchone()[0]
          curs.execute("""UPDATE bindings
-                         SET endtime=%s, exitcode=%s
+                         SET endtime=%s,
+                             exitcode=%s,
+                             details=%s
                          WHERE id = %s;
-                      """, (now, exitcode, ibind))
+                      """, (now, exitcode, ":".join(badslices), ibind))
    os.chdir("..")
    shutil.rmtree(workdir)
    return 1
@@ -243,21 +244,31 @@ def merge_evio_skims(run, seqno, slices):
              "sync": "sync_{0:06d}_{1:03d}.evio",
              "ps": "ps_{0:06d}_{1:03d}.evio",
             }
+   badslices = []
+   slicepatt = re.compile(r"([1-9][0-9]*),([1-9][0-9]*)/")
    for iset in inset:
       ofile = outset[iset].format(run, seqno)
       ifiles = ["{0},{1}/".format(sl[0], sl[1]) +
                 inset[iset].format(run, seqno, sl[0], sl[1])
                for sl in slices
                ]
-      cmd = ["eviocat", "-o", ofile] + ifiles
-      if subprocess.Popen(cmd).wait() != 0:
+      cmd = subprocess.Popen(["eviocat", "-o", ofile] + ifiles,
+                             stderr=subprocess.PIPE)
+      elog = cmd.communicate()
+      if cmd.returncode != 0:
+         for eline in elog[1].decode("ascii").split('\n'):
+            badslice = slicepatt.search(eline)
+            if badslice:
+               badslices.append("{0},{1}".format(badslice.group(1),
+                                                 badslice.group(2)))
+            sys.stderr.write(eline + '\n')
          sys.stderr.write("Error on output file {0}".format(ofile) +
                           " - evio file merging failed!\n")
          sys.stderr.flush()
-         return -1 # output data files unreadable
+         continue
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       upload(ofile, odir)
-   return 0
+   return badslices
 
 def merge_root_histos(run, seqno, slices):
    """
@@ -283,21 +294,31 @@ def merge_root_histos(run, seqno, slices):
              "tree_PSFlux": "tree_PSFlux_{0:06d}_{1:03d}.root",
              "tree_TPOL": "tree_TPOL_{0:06d}_{1:03d}.root",
             }
+   badslices = []
+   slicepatt = re.compile(r"([1-9][0-9]*),([1-9][0-9]*)/")
    for iset in inset:
       ofile = outset[iset].format(run, seqno)
       ifiles = ["{0},{1}/".format(sl[0], sl[1]) +
                 inset[iset].format(run, seqno, sl[0], sl[1])
                for sl in slices
                ]
-      cmd = ["hadd", ofile] + ifiles
-      if subprocess.Popen(cmd).wait() != 0:
+      cmd = subprocess.Popen(["hadd", ofile] + ifiles,
+                             stderr=subprocess.PIPE)
+      elog = cmd.communicate()
+      if cmd.returncode != 0:
+         for eline in elog[1].decode("ascii").split('\n'):
+            badslice = slicepatt.search(eline)
+            if badslice:
+               badslices.append("{0},{1}".format(badslice.group(1),
+                                                 badslice.group(2)))
+            sys.stderr.write(eline + '\n')
          sys.stderr.write("Error on output file {0}".format(ofile) +
                           " - root file merging failed!\n")
          sys.stderr.flush()
-         return -1
+         continue
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       upload(ofile, odir)
-   return 0
+   return badslices
 
 def merge_hddm_output(run, seqno, slices):
    """
@@ -311,6 +332,8 @@ def merge_hddm_output(run, seqno, slices):
    outset = {"REST": "dana_rest_{0:06d}_{1:03d}.hddm",
              "converted_random": "converted_random_{0:06d}_{1:03d}.hddm",
             }
+   badslices = []
+   slicepatt = re.compile(r"([1-9][0-9]*),([1-9][0-9]*)/")
    for iset in inset:
       ofile = outset[iset].format(run, seqno)
       ifiles = []
@@ -320,15 +343,23 @@ def merge_hddm_output(run, seqno, slices):
          if iset == "converted_random" and not os.path.exists(ifile):
             continue # missing converted_random is not an error
          ifiles.append(ifile)
-      cmd = ["hddmcat", "-o", ofile] + ifiles
-      if subprocess.Popen(cmd).wait() != 0:
+      cmd = subprocess.Popen(["hddmcat", "-o", ofile] + ifiles,
+                             stderr=subprocess.PIPE)
+      elog = cmd.communicate()
+      if cmd.returncode != 0:
+         for eline in elog[1].decode("ascii").split('\n'):
+            badslice = slicepatt.search(eline)
+            if badslice:
+               badslices.append("{0},{1}".format(badslice.group(1),
+                                                 badslice.group(2)))
+            sys.stderr.write(eline + '\n')
          sys.stderr.write("Error on output file {0}".format(ofile) +
                           " - hddm file merging failed!\n")
          sys.stderr.flush()
-         return -1
+         continue
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       upload(ofile, odir)
-   return 0
+   return badslices
 
 def merge_job_info(run, seqno, slices):
    """
@@ -342,6 +373,8 @@ def merge_job_info(run, seqno, slices):
             }
    tarset = {"job_info": "job_info_{0:06d}_{1:03d}.tgz",
             }
+   badslices = []
+   slicepatt = re.compile(r"([1-9][0-9]*),([1-9][0-9]*)/")
    for iset in inset:
       outlist = []
       for i in range(0, len(inset[iset])):
@@ -353,15 +386,23 @@ def merge_job_info(run, seqno, slices):
                   ostr.write(lines)
          outlist.append(ofile)
       tarfile = tarset[iset].format(run, seqno)
-      cmd = ["tar", "zcf", tarfile] + outlist
-      if subprocess.Popen(cmd).wait() != 0:
+      cmd = subprocess.Popen(["tar", "zcf", tarfile] + outlist,
+                             stderr=subprocess.PIPE)
+      elog = cmd.communicate()
+      if cmd.returncode != 0:
+         for eline in elog[1].decode("ascii").split('\n'):
+            badslice = slicepatt.search(eline)
+            if badslice:
+               badslices.append("{0},{1}".format(badslice.group(1),
+                                                 badslice.group(2)))
+            sys.stderr.write(eline + '\n')
          sys.stderr.write("Error on output file {0}".format(tarfile) +
                           " - job logs tarballing failed!\n")
          sys.stderr.flush()
-         return -1
+         continue
       odir = output_area + "/" + iset + "/{0:06d}".format(run)
       upload(tarfile, odir)
-   return 0
+   return badslices
 
 # default action is to exit on the first error
 
