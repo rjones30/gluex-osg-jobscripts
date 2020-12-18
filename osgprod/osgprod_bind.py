@@ -47,21 +47,6 @@ def db_connection():
       conn = dbconnection
    return conn
 
-def create_table_bindings(delete=False):
-   with db_connection().cursor() as conn:
-      with conn.cursor() as curs:
-         if delete:
-            curs.execute("DROP TABLE bindings;")
-         curs.execute("""CREATE TABLE bindings
-                         (id          SERIAL  PRIMARY KEY     NOT NULL,
-                          iraw        INT     REFERENCES rawdata(id),
-                          starttime   TIMESTAMP WITH TIME ZONE,
-                          endtime     TIMESTAMP WITH TIME ZONE,
-                          exitcode    INT,
-                          details     TEXT,
-                          UNIQUE(iraw));
-                      """)
-
 def upload(outfile, outdir):
    """
    Uploads outfile to the storage element at dst_url under
