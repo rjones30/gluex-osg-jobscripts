@@ -90,40 +90,42 @@ def next():
       with conn.cursor() as curs:
          try:
             curs.execute("""SELECT rawdata.id,rawdata.run,rawdata.seqno,
-                                   rawdata.nblocks,slices.block1,slices.block2,
+                                   slices.block1,slices.block2,
                                    jobs.cluster,jobs.process
                             FROM rawdata
                             LEFT JOIN bindings
                             ON bindings.iraw = rawdata.id
                             INNER JOIN slices
                             ON slices.iraw = rawdata.id
-                            INNER JOIN jobs
+                            LEFT JOIN jobs
                             ON slices.ijob = jobs.id
-                            WHERE bindings.id IS NULL
                             AND jobs.exitcode = 0
+                            WHERE bindings.id IS NULL
                             ORDER BY rawdata.id,slices.block1
                             LIMIT 2000;
                          """)
-            blocks2do = {}
+            slices_missing = 1
             for row in curs.fetchall():
                i = int(row[0])
                if i != iraw:
-                  if len(blocks2do) == 1:
+                  if slices_missing == 0:
                      break
                   else:
                      run = int(row[1])
                      seqno = int(row[2])
-                     nblocks = int(row[3])
-                     blocks2do = set(range(0,nblocks))
+                     slices_missing = 0
                      slices = []
                      iraw = i
-               block1 = int(row[4])
-               block2 = int(row[5])
-               blocks2do ^= set(range(block1,block2))
-               cluster = int(row[6])
-               process = int(row[7])
-               slices.append((block1,block2,cluster,process))
-            if len(blocks2do) != 1:
+               block1 = int(row[3])
+               block2 = int(row[4])
+               if row[5] is not None and row[6] is not None:
+                  cluster = int(row[5])
+                  process = int(row[6])
+                  slices.append((block1,block2,cluster,process))
+               else:
+                  print("slices missing on", row[5], row[6])
+                  slices_missing += 1
+            if slices_missing:
                return 0
             else:
                curs.execute("SELECT TIMEZONE('GMT', NOW());")
@@ -233,10 +235,23 @@ def merge_evio_skims(run, seqno, slices):
    slicepatt = re.compile(r"([1-9][0-9]*),([1-9][0-9]*)/")
    for iset in inset:
       ofile = outset[iset].format(run, seqno)
-      ifiles = ["{0},{1}/".format(sl[0], sl[1]) +
-                inset[iset].format(run, seqno, sl[0], sl[1])
-               for sl in slices
-               ]
+      ifiles = []
+      for sl in slices:
+         ifile = "{0},{1}/".format(sl[0], sl[1]) +\
+                 inset[iset].format(run, seqno, sl[0], sl[1])
+         if iset == "sync" and not os.path.exists(ifile):
+            print("Warning in merge_evio_skims - ",
+                  "missing sync event skim ",
+                  "in slice {0},{1}".format(sl[0], sl[1])
+                 )
+            continue
+         elif iset == "omega" and not os.path.exists(ifile):
+            print("Warning in merge_evio_skims - ",
+                  "missing omega event skim ",
+                  "in slice {0},{1}".format(sl[0], sl[1])
+                 )
+            continue
+         ifiles.append(ifile)
       cmd = subprocess.Popen(["eviocat", "-o", ofile] + ifiles,
                              stderr=subprocess.PIPE)
       elog = cmd.communicate()
@@ -326,7 +341,11 @@ def merge_hddm_output(run, seqno, slices):
          ifile = "{0},{1}/".format(sl[0], sl[1]) +\
                  inset[iset].format(run, seqno, sl[0], sl[1])
          if iset == "converted_random" and not os.path.exists(ifile):
-            continue # missing converted_random is not an error
+            print("Warning in merge_hddm_output - ",
+                  "missing conveted_random output ",
+                  "in slice {0},{1}".format(sl[0], sl[1])
+                 )
+            continue
          ifiles.append(ifile)
       cmd = subprocess.Popen(["hddmcat", "-o", ofile] + ifiles,
                              stderr=subprocess.PIPE)
