@@ -158,7 +158,7 @@ def checkout_workscript(environ, output):
             block1 = int(row[3])
             block2 = int(row[4])
             lastblock = block1 + maxblockspercore * cpus
-            lastblock = block2 if lastblock > block2 else lastblock
+            lastblock = block2 if lastblock + 1 >= block2 else lastblock
             curr.execute("""UPDATE slices SET 
                             ijob = %s, block2 = %s
                             WHERE id = %s;
