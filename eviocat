@@ -38,6 +38,7 @@ while argc < len(sys.argv):
       break
    argc += 1
 
+head = []
 blockno = 0
 for infile in sys.argv[argc:]:
    with open(infile, "rb") as fin:
@@ -65,11 +66,12 @@ for infile in sys.argv[argc:]:
             fout.write(fin.read(length * 4))
          else:
             break
-blockno += 1
-rehead = [h for h in head]
-rehead[1] = blockno
-buf = struct.pack(">IIIIIIII", *rehead)
-fout.write(buf)
+if len(head) > 0:
+   blockno += 1
+   rehead = [h for h in head]
+   rehead[1] = blockno
+   buf = struct.pack(">IIIIIIII", *rehead)
+   fout.write(buf)
 EOI
 
 chmod +x .eviocat.py
