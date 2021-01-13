@@ -408,11 +408,99 @@ def merge_job_info(run, seqno, slices):
       upload(tarfile, odir)
    return badslices
 
+def unpack(run=0, seqno=0, iraw=0):
+   """
+   Looks up rawdata id iraw and unpacks the job output tarballs
+   from all jobs that completed successfully into a new directory
+   named iraw under the pwd. If iraw is not known, alternatively
+   one can supply the run number and sequence number of the raw
+   data input file.
+   """
+   if iraw == 0 and run == 0:
+      print("Usage: osgprod_bind.unpack(iraw=<iraw>)")
+      print("   or: osgprod_bind.unpack(run=<run>, seqno=<seqno>)")
+      return 0
+   if iraw:
+      with db_connection() as conn:
+         with conn.cursor() as curs:
+            curs.execute("""SELECT rawdata.id,rawdata.run,rawdata.seqno,
+                                   slices.block1,slices.block2,
+                                   jobs.cluster,jobs.process
+                            FROM rawdata
+                            JOIN slices
+                            ON slices.iraw = rawdata.id
+                            JOIN jobs
+                            ON slices.ijob = jobs.id
+                            AND jobs.exitcode = 0
+                            WHERE rawdata.id = %s
+                            ORDER BY rawdata.id,slices.block1;
+                         """, (iraw,))
+            slices = []
+            for row in curs.fetchall():
+               run = int(row[1])
+               seqno = int(row[2])
+               block1 = int(row[3])
+               block2 = int(row[4])
+               cluster = int(row[5])
+               process = int(row[6])
+               slices.append((block1,block2,cluster,process))
+   elif run:
+      with db_connection() as conn:
+         with conn.cursor() as curs:
+            curs.execute("""SELECT rawdata.id,rawdata.run,rawdata.seqno,
+                                   slices.block1,slices.block2,
+                                   jobs.cluster,jobs.process
+                            FROM rawdata
+                            JOIN slices
+                            ON slices.iraw = rawdata.id
+                            JOIN jobs
+                            ON slices.ijob = jobs.id
+                            AND jobs.exitcode = 0
+                            WHERE rawdata.run = %s
+                            AND rawdata.seqno = %s
+                            ORDER BY rawdata.id,slices.block1;
+                         """, (run, seqno))
+            slices = []
+            for row in curs.fetchall():
+               iraw = int(row[0])
+               block1 = int(row[3])
+               block2 = int(row[4])
+               cluster = int(row[5])
+               process = int(row[6])
+               slices.append((block1,block2,cluster,process))
+   workdir = str(iraw)
+   os.mkdir(workdir)
+   os.chdir(workdir)
+   badslices = []
+   for sl in slices:
+      sdir = str(sl[0]) + "," + str(sl[1])
+      os.mkdir(sdir)
+      tarfile = "job_{0}_{1}.tar.gz".format(sl[2], sl[3])
+      tarpath = input_area + "/" + tarfile
+      try:
+         subprocess.check_output(["gfal-copy", src_url + tarpath,
+                                  "file://" + os.getcwd() + "/" + tarfile])
+      except:
+         sys.stderr.write("Error -999 on rawdata id {0}".format(iraw) +
+                          " - job output " + tarfile + " is missing!\n")
+         sys.stderr.flush()
+         badslices.append(sdir)
+         continue
+      try:
+         subprocess.check_output(["tar", "zxf", tarfile, "-C", sdir])
+      except:
+         sys.stderr.write("Error -999 on rawdata id {0}".format(iraw) +
+                          " - job output " + tarfile + " is not readable!\n")
+         sys.stderr.flush()
+         badslices.append(sdir)
+      finally:
+         os.remove(tarfile)
+   return len(badslices)
+
 # default action is to exit on the first error
 
 while True:
    resp = next()
-   if resp != 0:
-      print("next() returns", resp)
-      continue
-   sys.exit(resp)
+   if resp == 0:
+      break
+   print("next() returns", resp)
